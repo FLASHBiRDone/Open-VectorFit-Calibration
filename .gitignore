@@ -1,0 +1,12 @@
+artifacts/
+runtime/
+profiles/
+*.vectorfit.json
+*.rawaccel.json
+*.dll
+*.exe
+*.log
+.env*
+.vs/
+bin/
+obj/
