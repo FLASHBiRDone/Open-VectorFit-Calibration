@@ -272,12 +272,17 @@ namespace VectorFit {
             RefreshDriver();var stack=Stack();content.Controls.Add(stack);
             Add(stack,TextLabel("Runde "+session.Round+" · Bruk profilen globalt",22,true,43));
             Add(stack,ProfileSelector());
+            var setupRow=new FlowLayoutPanel{Height=52};
+            setupRow.Controls.Add(Button(DriverSetup.Text("Sett opp Raw Accel","Set up Raw Accel"),delegate{OpenDriverSetup(false);},245));
+            setupRow.Controls.Add(Button(DriverSetup.Text("Valgfritt: Interception-oppsett","Optional: Interception setup"),delegate{OpenDriverSetup(true);},310));
+            Add(stack,setupRow);
             string measured=session.Baseline.Count==0?"Åpne en måling eller kalibrer først.":session.ValidationPassed?"A/B-testen bekrefter forbedring for denne profiltypen.":session.CanTryRawAccel?"Forbedring er ikke bekreftet. Du kan velge å prøve profilen ved å trykke Aktiver med Raw Accel.":session.Notes;
             Add(stack,TextLabel(measured,11,false,48));
             bool curved=session.UsesInterception;
             Add(stack,TextLabel(curved?"Valgfri, eksperimentell korreksjon av retning og buer. Krever en separat Interception-driver og at VectorFit fortsetter å kjøre. Stopp med Ctrl+Alt+F12.":"Følsomhet, retning og rotasjon brukes av Raw Accel på kjernenivå, også med rå museinput i spill. VectorFit kan lukkes. Interception brukes ikke.",11,false,65));
             var buttons=new FlowLayoutPanel{Height=52};
             var activate=Button(curved?"Åpne Interception-valg":"Aktiver med Raw Accel",delegate{if(curved)OpenGlobal();else ActivateProfile();},245,true);
+            activate.Enabled=curved||(activeJson!=null&&session.CanTryRawAccel);
             buttons.Controls.Add(activate);
             if(!curved)buttons.Controls.Add(Button("Eksporter Raw Accel-profil",ExportProfile,240));
             buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,220));Add(stack,buttons);
@@ -286,11 +291,16 @@ namespace VectorFit {
             string driver=activeJson==null?"Raw Accel kunne ikke leses.":Driver.Neutral(activeJson)?"Raw Accel er tilgjengelig og nøytral.":"Raw Accel har en aktiv profil.";
             Add(stack,TextLabel(driver,11,false,40));
             var recovery=new FlowLayoutPanel{Height=52};
-            recovery.Controls.Add(Button("Nøytraliser før måling",Neutralize,230));
+            recovery.Controls.Add(Button(DriverSetup.Text("Tilbakestill til nøytral","Reset to neutral"),Neutralize,230));
             recovery.Controls.Add(Button("Gjenopprett profil",Restore,210));
             recovery.Controls.Add(Button("Oppdater status",delegate{ShowPage(2);},190));Add(stack,recovery);
             Add(stack,TextLabel("Nøytraliser slår av Raw Accel-justeringene og lagrer en sikkerhetskopi. Gjenopprett henter tilbake oppsettet før siste endring.",10,false,42));
             Add(stack,TextLabel(curved?"Anti-cheat: FACEIT blokkerer Interception-driveren. Å stoppe VectorFit avinstallerer ikke driveren. Bruk bare der driveren er tillatt. Ingen driver installeres automatisk.":"Denne profilen endrer ikke bevegelsesbuene dynamisk. Slik kurvekorreksjon kan velges separat og krever en egen A/B-test. Ingen generell garanti for godkjenning av anti-cheat.",10,false,65));
+        }
+        void OpenDriverSetup(bool interception) {
+            EnsureFilterStopped();
+            using(var setup=new DriverSetupForm(interception))setup.ShowDialog(this);
+            ShowPage(2);
         }
         void OpenGlobal() {
             if(!session.UsesInterception)throw new Exception("Velg Interception-profilen først.");

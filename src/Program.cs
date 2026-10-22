@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -15,7 +15,11 @@ namespace VectorFit {
                 Native.SetProcessDPIAware();Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
 #if DEVELOPMENT
                 if(Array.IndexOf(args,"en")>=0)L.English=true;
-                if(args.Length>2&&args[0]=="--render-circle-result") {
+                if(args.Length>1&&args[0]=="--render-driver-setup"){
+                    using(var f=new DriverSetupForm(Array.IndexOf(args,"interception")>=0)){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();
+                        using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}
+                    }return 0;
+                }                if(args.Length>2&&args[0]=="--render-circle-result") {
                     var session=Session.FromJson(File.ReadAllText(args[2]));using(var f=new CircleResultForm(session.Circles,session.InputCorrection)){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}f.Close();}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-warning") {
@@ -50,3 +54,5 @@ namespace VectorFit {
         }
     }
 }
+
+

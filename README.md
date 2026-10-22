@@ -48,17 +48,18 @@ Optional tests of historical local measurements are skipped when those private f
 
 ## Global input
 
-Raw Accel integration requires its separately installed driver. The application does not install drivers automatically. Applying a global profile is an explicit action with backup and readback. This does not program mouse firmware.
+Raw Accel integration requires its separately installed driver. Open **Use in Windows and games → Set up Raw Accel** to install the bundled official driver. If the package is missing, setup downloads the fixed official release. Its SHA-256 is checked before extraction. Installation requires your choice and Windows administrator approval; restart and check status afterwards. No profile is activated by installation. Applying a global profile is an explicit action with backup and readback. **Reset to neutral** disables adjustments; **Restore profile** retrieves the last backup. This does not program mouse firmware.
 
-Interception is an optional experimental backend, separately licensed and installed. Its binaries are not included. Check the rules and compatibility of each game's anti-cheat before using any input driver; compatibility is not guaranteed.
+Interception is an optional experimental backend with separate licensing. **Optional: Interception setup** explains the license and anti-cheat risks, then lets you choose an official download and installation or uninstallation. Its binaries are not included in the repository. Check upstream terms for your intended use, particularly commercial use. Stopping the filter does not uninstall the driver. Check the rules and compatibility of each game's anti-cheat before using any input driver; compatibility is not guaranteed.
 
 ## Data and privacy
 
-Measurements and profiles are stored locally. They may contain personal movement and device information. Do not commit them. This source-only repository excludes profiles, measurements, reports, executables and third-party binaries.
+Measurements and profiles are stored locally. They may contain personal movement and device information. Do not commit them. This repository excludes private profiles, measurements and reports. The unmodified official Raw Accel installer archive is included with its license; Interception binaries are not included.
 
 ## License and project status
 
 Original project code is offered under the MIT license; see LICENSE. Third-party dependencies retain their own licenses; see THIRD_PARTY_NOTICES.md. This project is independent and not affiliated with Corsair, Aimlabs, Logitech, Raw Accel or Interception.
 
 The working name and implementation have not received trademark or patent clearance. MIT licensing does not grant rights owned by unrelated third parties.
+
 

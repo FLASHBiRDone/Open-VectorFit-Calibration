@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -185,7 +185,7 @@ namespace VectorFit {
                     typeof(MainForm).GetMethod("ShowPage",flags).Invoke(main,new object[]{2});
                     var selector=descendants(main).OfType<System.Windows.Forms.ComboBox>().Single(b=>(string)b.Tag!="language");
                     Check(selector.SelectedIndex==0&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Aktiver med Raw Accel"),"Global page defaults to the direct Raw Accel route");
-                    Check(descendants(main).OfType<System.Windows.Forms.Button>().Single(b=>b.Text=="Aktiver med Raw Accel").Enabled,"Activation remains clickable so missing requirements can be explained");
+                    Check(descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Sett opp Raw Accel"),"Missing driver has an explicit setup route");
                     selector.SelectedIndex=1;
                     Check(preview.UsesInterception&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Åpne Interception-valg"),"UI explicitly selects the separate Interception route");
                     descendants(main).OfType<System.Windows.Forms.ComboBox>().Single(b=>(string)b.Tag!="language").SelectedIndex=0;
@@ -291,6 +291,27 @@ namespace VectorFit {
                 NaturalCircleFeatures(path);
                 DualTaskFeatures();
                 ConfirmationFeatures();
+                Check(DriverSetup.RawUrl.StartsWith("https://github.com/RawAccelOfficial/")&&DriverSetup.InterceptionUrl.StartsWith("https://github.com/oblitum/"),"Installer sources pinned to official repositories");
+                var setupStart=DriverSetup.StartInfo(@"C:verified\installer.exe",false,false);
+                Check(setupStart.Verb=="runas"&&setupStart.UseShellExecute&&setupStart.Arguments=="","Raw installer requires Windows elevation and has no silent flags");
+                Check(DriverSetup.StartInfo("installer.exe",true,true).Arguments=="/uninstall","Interception removal is explicit");
+                Check(DriverSetup.StartInfo("installer.exe",true,false).Arguments=="/install","Interception installation uses official switch");
+                foreach(bool optionalDriver in new[]{false,true}){
+                    string archive=Path.Combine(Driver.Root,optionalDriver?"interception-setup.zip":"rawaccel-setup.zip");
+                    if(File.Exists(archive)){
+                        string unpack=Path.Combine(Driver.Root,"test-package-"+Guid.NewGuid().ToString("N"));
+                        string executable=DriverSetup.Extract(archive,unpack,optionalDriver);
+                        Check(File.Exists(executable),"Verified official package extracts without executing installer");
+                        Check(File.Exists(Path.Combine(Path.GetDirectoryName(executable),optionalDriver?"install-interception.exe":"installer.exe")),"Installer path exists in pinned archive");
+                    }
+                }
+                var badZip=Path.Combine(Driver.Data,"test-invalid-installer.zip");Directory.CreateDirectory(Driver.Data);File.WriteAllText(badZip,"invalid");
+                bool setupRejected=false;try{DriverSetup.Extract(badZip,Path.Combine(Driver.Data,"rejected-setup"),false);}catch{setupRejected=true;}
+                Check(setupRejected&&!Directory.Exists(Path.Combine(Driver.Data,"rejected-setup")),"Invalid installer rejected before extraction or execution");
+                File.Delete(badZip);
+                using(var setupForm=new DriverSetupForm(false))Check(setupForm.Text.Contains("Raw Accel"),"Raw setup can open without installing");
+                using(var setupForm=new DriverSetupForm(true))Check(setupForm.Text.Contains("Interception"),"Optional setup can open without installing");
+
                 var c=new Correction{Right=.96,Left=1.04,Down=1.025,Up=.98,Rotation=1.5,Sensitivity=.85};
                 string tmp=Path.Combine(Path.GetDirectoryName(path),"test-profile.json");File.WriteAllText(tmp,Driver.Config(c).ToString());
                 var validated=JObject.Parse(Driver.Run("validate",tmp));Check((string)validated["profiles"][0]["name"]=="VectorFit","Official runtime accepts generated profile");
@@ -757,3 +778,5 @@ namespace VectorFit {
         }
     }
 }
+
+

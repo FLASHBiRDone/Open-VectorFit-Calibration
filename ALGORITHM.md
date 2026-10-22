@@ -1,4 +1,20 @@
-﻿# VectorFit 0.12: dual tasks and tendency-based calibration
+# Open VectorFit Calibration: current algorithm
+
+This document describes the algorithm used for new calibration sessions. Thresholds are engineering choices unless explicitly identified as statistical tests. The software measures performance and tests bounded proposals; it does not guarantee better aim or identify a hardware defect.
+
+## Calibration flow
+
+A phase consists of flick mapping followed by 16 precision targets. Flick mapping can extend from 48 to 64 to 80 attempts when fitting needs more evidence. Phase 1 ends with a baseline and a proposal. The user can test that proposal with A/B, explicitly apply it for the next phase, or keep the current profile. Later phases compare their next proposal with the profile used for their measurements.
+
+Each task transition has centered instructions and a click to start; that click is not a trial. Target onset varies by 150–900 ms. Flick trials advance on the first click, including misses. Precision trials advance on a hit or the 3000 ms deadline. Misses do not reset the precision clock. Flick target radius is 0.65 degrees and precision radius is 0.35 degrees, with a 5-pixel minimum. Precision uses eight directions at distances of 8 and 14 degrees.
+
+Measurements, click outcomes, timestamps, profile identity and phase ancestry are saved. Precision data are kept separately and do not enter flick endpoint fitting. History differences are descriptive: practice, fatigue and changing task samples can affect them.
+
+## Input coordinates and avoiding double correction
+
+The selected current profile is copied into InputCorrection. Driver matching is checked before measurement and its configuration fingerprint is checked afterwards. Unknown driver status or changed settings block use of the measurement.
+
+Ordinary measurement observes the existing input once. Fitting inverts the measured profile for each movement delta to recover the input basis. A/B then applies either the full measured profile A or the full candidate B to that recovered input. If B is already active globally, the comparison instead undoes B first. The candidate replaces the previous settings; it is not applied twice.
 
 ## Measurement and fitting
 
@@ -6,9 +22,33 @@ The original timestamped movement path and click outcome are preserved. Hit dete
 
 Trajectory analysis interpolates positions at 4 ms intervals, with a three-sample position filter for stroke segmentation. Once axial progress exceeds 35% and movement has lasted at least 32 ms, a reversal of at least max(2.5% target distance, half the target radius) lasting at least 12 ms, or a 32 ms low-speed interval below 12% of the prior peak speed, can identify the end of the initial stroke. If no such boundary is found, fitting uses the click endpoint. These are engineering heuristics, not a validated motor-control model.
 
-The boundary is identified on the observed path. The active profile is inverted per raw delta before fitting the corresponding prefix, preventing double correction. Direction, overall sensitivity and the optional curve model use that prefix. The full path still contributes to observed performance statistics and A/B assessment. Circle fitting remains a weak, bounded prior. Existing total and per-round correction bounds are unchanged.
+The boundary is identified on the observed path. The active profile is inverted per raw delta before fitting the corresponding prefix, preventing double correction. Direction, overall sensitivity and the optional curve model use that prefix. The full path still contributes to observed performance statistics and A/B assessment. Circle fitting remains a weak, bounded prior. Correction bounds are specified below.
 
 Metrics include click distance, actual hits, initial reach, maximum axial overshoot, reverse axial travel, path length after the first stroke, excess path length, first target entry, target re-entries and time after the first stroke. Target exits use 8% radial hysteresis to limit boundary jitter. Missing trajectory or target geometry is not presented as zero error.
+
+## Direction and scalar sensitivity
+
+The directional model has separate right, left, up and down gains, rotation and one scalar sensitivity. The fitted directional gains are normalized independently of scalar reach. The proposal blends the previous and fitted gains using their geometric mean and averages rotation. Absolute directional gains are limited to 0.92–1.08; rotation is limited to ±3 degrees.
+
+Split-sample directional fits must agree within 0.08 per gain and 2 degrees rotation for repeatability. Sensitivity uses stable over- or undershoot in at least six of eight directions, split reach agreement within 0.08, and repeatable direction fitting. Absolute median reach error must exceed max(0.02, 0.75 × median absolute deviation), with both chronological halves showing the same bias beyond 2%.
+
+When supported, scalar sensitivity is multiplied by 1/sqrt(median reach), bounded to a 0.95–1.05 change per phase and 0.75–1.25 overall. Otherwise scalar sensitivity is retained. The initial stroke can reveal an overshoot even when the user corrects back and ultimately hits; the full movement and final hit are still assessed in A/B.
+
+## Natural circle tendency
+
+The circle task records 30 attempts clockwise followed by 30 counterclockwise, with a 2.5-second pause on direction change. Timeouts consume an attempt; pauses do not. No target dots or drawn trail encourage cosmetic correction of the user's natural movement. Zero-motion attempts count but cannot supply shape estimates.
+
+All counted finite moving paths contribute to the displayed median, regardless of roundness, closure or fit residual. Paths are centered by their bounding box and resampled at 72 equal path-length positions without adding a closing segment. Counterclockwise order is reversed. RMS radius normalizes size. Cyclic starting-point alignment does not rotate the geometry. Pointwise medians preserve irregular shapes.
+
+Ellipse fitting is separate from median inclusion. A prior requires 30 counted attempts and at least 24 measurable shapes in each direction. Anisotropy is represented by log(major/minor) × (cos(2 angle), sin(2 angle)). Median vector spread must be below 0.55, direction disagreement below 0.25 and early/late disagreement below 0.35. Opposing median log width/height biases beyond ±0.02 block a common correction.
+
+The prior evaluates the median after undoing the input profile and applying the flick-derived proposal. It tries reciprocal horizontal/vertical adjustments toward equal width and height. The per-axis limit is 0.02 × clamp(1 − max(0, spread − 0.10)/0.60, 0.25, 1), within the absolute gain limits. Simulated major/minor ratio must improve by at least 0.005 from a starting ratio of at least 1.02. Circles alone change neither scalar sensitivity nor rotation. A tilted ellipse may remain uncorrected. Simulated roundness is not evidence of improved aim.
+
+## Optional movement-curve correction
+
+Interception profiles can additionally use a direction-dependent curve model. Training resamples movement spatially at 0.5-degree intervals into eight heading sectors and up to 50 distance bins. It estimates repeated local heading deviations rather than targeting objects on screen. Unsupported bins remain neutral and corrections are bounded to ±8 degrees. Runtime processing uses the same curve and directional transform as the local trainer, retaining fractional output counts.
+
+This component requires its own validated Interception profile. Raw Accel must be neutral or absent during global Interception use. The app must stay running. Closing or stopping the filter ends correction; it does not uninstall the driver.
 
 ## Prespecified comparison plan
 
@@ -29,58 +69,34 @@ Movement duration is also checked separately from reaction time: its median must
 
 The exact binomial and multiple-look thresholds have their nominal interpretation only under their statistical assumptions, including suitable independence/symmetry of paired outcomes. Trial order counterbalancing reduces simple drift but does not prove independence or remove adaptation and learning. Repeated manual runs are separate experiments; the nominal family error budget is per run, not lifetime. No claim of a 95% probability that a profile helps the user is made.
 
-## Compatibility and verification
+## Precision acceptance
 
-Version 0.8 and older retain the original fitting method and assessments when reopened. Newly requested A/B on an old proposal uses the adaptive protocol without refitting it. The comparison protocol and achieved sample count are stored separately for Raw Accel and Interception. New rounds use the 0.9 fitting method, and existing source files remain intact through new versioned filenames.
+After the sequential flick comparison, 32 precision trials form 16 matched A/B pairs with balanced order per direction. Every click is recorded. Timeouts contribute 3000 ms to time summaries.
 
-Tests cover corrected hits, direct hits, undershoot, polling-rate variation, exact stopping thresholds, balanced scheduling, actual live early-stop and extension transitions, timeouts, missing/mismatched pairs, hit/time/path regressions, legacy profile equivalence and UI rendering. Synthetic and offline historical tests verify mechanics, not real-world efficacy. No driver installation, activation or mouse-input injection is performed by these tests.
+A complete comparison requires matching target geometry, one A and one B per pair, correct directional coverage and internally consistent clicks. Precision acceptance requires at least eight hits in each profile, no fewer B hits, no extra B miss clicks, and at most 5% increases in both median and total target time. Flick improvement must also pass this precision guard for overall approval. This is a regression safeguard, not a separate significance test.
 
-## Historical fixed-size circle protocol and shape estimation (0.10)
+## Confirmation without further fitting
 
-`CircleData.Protocol=1` is explicitly recorded by the new circle form. Legacy files omit it and retain protocol 0, including their original 15-lap contribution and previously tested proposals. New protocol: radius 12 degrees, 30 completed clockwise laps then 30 counterclockwise. A timeout is retained but retried without advancing the completed-lap index. Direction change has a 2.5-second unmeasured countdown. Pause and closure retain incomplete attempts. Completion opens a median preview; it can be saved and resumed at target mapping without repeating the circles.
+A confirmation run clones the session and freezes the same A/B proposal. It preserves a compact record of the previous comparison and clears only the current comparison data. It does not advance the calibration phase, refit, or activate a new profile. Changing profile type requires leaving the frozen comparison.
 
-The existing robust conic fit supplies each lap's center and axes. Each valid lap is centered and divided by sqrt(major*minor), removing overall size while retaining orientation. Radius is summarized in 72 equal angular bins. At least 60 bins must be occupied; missing bins are interpolated cyclically only when the surrounding span is at most 9 bins. The median radius across laps at each bin forms a pointwise median path. A conic fit to that path measures its ellipse. Original paths remain unmodified. CW, CCW and combined median paths are all shown; simulation is labeled as prediction rather than a measured improvement.
+A SHA-256 identity covers setup, profile mode, input correction, candidate correction and active curve. Frozen proposals are checked on load. Repeat summaries compare records only when this identity matches. Different configurations are not pooled.
 
-Eligibility requires 30 complete laps each direction, >=24 eligible shapes each direction, the configured common radius, and a valid median ellipse. Shape disagreement uses the vector log(major/minor)*(cos(2*angle),sin(2*angle)), so opposite tilted ellipses do not falsely agree just because their width/height matches. Median distance from the aggregate ellipse vector must be <0.10. CW versus CCW median vector distance must be <0.08, as must early-half versus late-half distance separately within each direction. Fixed ordering may still confound direction with fatigue; these are engineering safeguards, not independent-sample confidence tests or proof of a sensor defect.
+The result headline distinguishes incomplete data, supported improvement, promising change, slower-but-closer results and mixed or weaker results. A descriptive promising result requires at least 5% less median flick error, no fewer flick hits, at most 5% longer median flick time, and no deterioration beyond the specified precision limits. It never substitutes for the statistical approval rules.
 
-The circle prior predicts the median under the existing flick-derived proposal after undoing the measured input correction per delta. It tries a horizontal multiplier clamp(1/sqrt(width/height),0.98,1.02) and reciprocal vertical multiplier, subject to the existing absolute [0.92,1.08] axis bounds. It contributes only if simulated major/minor ratio falls by at least 0.005 and the starting ratio is >=1.02. It does not change rotation or scalar sensitivity. A tilted ellipse may therefore remain partly or entirely uncorrected. It is not silently whitened with a large rotation. Real A/B remains mandatory for a positive recommendation.
+Two consecutive completed checks that each pass can be described as supported in two controls. Repeated promising results remain unconfirmed. This does not establish a lifetime statistical guarantee or remove learning effects.
 
-## Conservative sensitivity evidence (0.10)
+## Global application and recovery
 
-New rounds set `ConservativeSensitivity=true`. In addition to existing six-of-eight direction support and split agreement, sensitivity changes require repeatable directional fitting, absolute median reach error >=max(0.02,0.75*MAD), and the same over/undershoot direction beyond 2% in the chronological first and last halves. This responds to the user's v0.9 recording: +3.18% sensitivity was proposed from initial undershoot despite unstable direction fitting; the candidate increased overshoot and failed A/B. The stronger rule leaves sensitivity unchanged for that recording in offline tests. It has not yet been demonstrated to improve real-user performance. Old files retain false and their exact tested proposals. New filenames use `-v10`.
+Raw Accel applies the complete scalar/directional/rotation configuration. The previous driver configuration is backed up before changes. The bridge reads back settings; failures trigger a best-effort restoration. Reset to neutral removes adjustments while preserving a backup; restore retrieves the last backup.
 
-## Active-profile recovery
+Driver installation is separate from profile application. Optional setup downloads a fixed official release and verifies its SHA-256 before extracting it. Administrator approval is requested through Windows. Installer exit is not treated as proof that the driver is usable; the user restarts and checks driver access. No calibration profile is activated by setup.
 
-The mismatch dialog offers an explicit Neutralize profile button with Cancel as the default key action. It backs up, applies neutral, re-reads and verifies the driver through the established path. A neutral-input measurement can resume after a successful readback. A nonneutral-input round returns to setup for a fresh measurement instead of combining old samples with a new input basis. Driver absence or uncertain readback never implies successful neutralization. Tests do not activate or neutralize a real driver.
+## Verification and limits
 
-## Historical deferred idea (through 0.11)
+Tests cover fitting, corrected hits, misses, polling-rate variation, paired scheduling, sequential checkpoints, timeouts, precision regressions, repeat identity, driver-transform equivalence, package checksums and setup construction. Tests do not install drivers or inject global input. Offline and synthetic tests verify implementation mechanics rather than real-world efficacy.
 
-The user proposed separate flick and precision stages to explore the speed/accuracy optimum, with click-to-advance versus hit-to-advance behavior. They explicitly asked not to build this yet. Version 0.11 retains the existing target-stage click behavior.
-
-## Sources
+## Method references
 
 - https://www.yorku.ca/mack/CHI01.htm — trajectory measures complement endpoint accuracy.
-- https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/signtest.htm — paired sign test and binomial interpretation.
-- https://itl.nist.gov/div898/handbook/prc/section4/prc473.htm — prespecified multiple-comparison error allocation.
-
-## Guided calibration and natural circles (0.11)
-
-New sessions explicitly set GuidedCalibration=true. Phase 1 ends after mapping and proposal fitting, without automatic A/B. Trying a proposal uses the existing explicit activation confirmation and driver readback before starting the next phase. Keeping the current profile starts the next phase on its verified input basis. Later phases retain the existing adaptive comparison. Legacy files retain their tested proposals. Result rows show scalar sensitivity, four directional multipliers and rotation relative to InputCorrection. History deltas are descriptive, not causal estimates.
-
-Circle protocol 2 records Counted separately from Complete. A timeout consumes one of the 30 attempts per direction; pauses do not. Natural tracking removes the radius-based completion gate. No target dots or tracer ask the user to repair their natural form.
-
-All counted finite moving paths contribute to the median regardless of roundness, closure or fit residual. Observed paths are centered by their bounding box and resampled to 72 equally spaced path-length positions, without adding a closing segment. CCW order is reversed; RMS radius normalizes size. Cyclic starting-point alignment does not rotate geometry. Pointwise medians preserve irregular shapes. Zero-motion attempts remain recorded but cannot supply shape data.
-
-Ellipse fitting and reliability are separate from inclusion in the displayed median. At least 24 measurable ellipse estimates per direction and 30 recorded attempts per direction are required for the bounded prior. Spread, direction agreement and early/late agreement retain the 0.10, 0.08 and 0.08 thresholds. These are engineering heuristics. The existing bounded axis-only proposal and simulated improvement requirement remain; no performance gain is inferred from geometric rounding alone.
-
-## Version 0.12: dual tasks and tendency-based circles
-
-New phases set DualTask. Mapping uses the existing flick trials followed by 16 precision targets (8 directions, radii 8 and 14 degrees). Precision target radius is 0.35 degrees, subject to the existing 5-pixel minimum; flick remains 0.65 degrees. Each task transition and the post-warmup transition has centered instructions and requires a click that does not consume a trial. Targets retain the 150–900 ms onset jitter. Phase 1 ends after both mapping tasks. Later phases run the existing sequential flick comparison, then 32 precision trials in matched A/B pairs, balanced in order within each direction.
-
-Precision is hit-to-advance with a fixed 3000 ms deadline from target onset, including reaction time. Miss clicks retain their timestamps, positions and hit flags without resetting the target or clock. All attempts, including timeouts and interrupted attempts, are kept. Precision uses separate session lists, never the flick endpoint-fitting dataset. A timeout contributes 3000 ms to precision time summaries. A successful flick comparison is gated by complete matched precision data, at least 8 of 16 hits in each profile, no fewer B hits, no additional B miss clicks and no more than 5% increase in both median and total target time. These are engineering regression guards, not a significance claim or formal noninferiority proof.
-
-Circle protocol 3 retains every natural moving path from protocol 2. Proposal eligibility now tolerates ordinary individual variation: anisotropy-vector median spread <0.55, CW/CCW gap <0.25, early/late gap <0.35, at least 24 measurable shapes per direction and exactly 30 counted attempts each. Opposing median log width/height biases beyond ±0.02 block a common proposal. Maximum per-axis adjustment is 0.02 * clamp(1-max(0,spread-0.10)/0.60,0.25,1), within the existing absolute bounds. The simulated median must still become rounder by at least 0.005. These thresholds are explicit engineering choices, not empirically established optimum values. The largest deviations are controlled by robust medians and the disagreement gates; no shape is removed from the displayed median for being ugly.
-
-Old protocol 2 proposals remain unchanged on load. Explicit ReanalyzeCircleTrend clones the data, records its source filename, upgrades only the circle protocol, clears both profiles' validation records and creates a new timestamp. It does not increment the measurement phase or activate the driver. Its candidate needs new validation.
-
-InputCorrection is copied from the selected previous profile. MainForm verifies driver matching before measurement and fingerprint continuity afterward. Ordinary input passes through once. UndoInputCorrection inverts each movement delta before fitting; A/B inverses the old profile then applies the complete candidate. Tests cover sign-changing movement, unequal axes, rotation, nonunit sensitivity, repeated rounds and agreement with the official Raw Accel runtime simulation. Tests do not activate real driver settings.
+- https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/signtest.htm — sign tests and binomial interpretation.
+- https://itl.nist.gov/div898/handbook/prc/section4/prc473.htm — multiple-comparison error allocation.

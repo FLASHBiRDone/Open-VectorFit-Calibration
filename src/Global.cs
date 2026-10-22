@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -48,10 +48,11 @@ namespace VectorFit {
         Session session;volatile bool stop=true;Thread worker;public bool IsFiltering {get{return !stop||(worker!=null&&worker.IsAlive);}}
         class Device {public int Id;public string Hardware;public override string ToString(){return L.T("Mus ")+Id+": "+Hardware;}}
         public GlobalForm() {
-            Text="VectorFit | Valgfri Interception-profil";ClientSize=new System.Drawing.Size(710,505);
+            Text="VectorFit | Valgfri Interception-profil";ClientSize=new System.Drawing.Size(710,555);
             var panel=new FlowLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(20),FlowDirection=FlowDirection.TopDown,WrapContents=false};Controls.Add(panel);
             panel.Controls.Add(new Label{Width=650,Height=65,Text="Profilen gjelder den valgte musen i Windows og alle programmer.\nStopp med Ctrl+Alt+F12 eller Stopp-knappen. Raw Accel må være nøytral.\nEksperimentell kurvekorreksjon. Krever Interception-driveren og omstart."});
-            panel.Controls.Add(new Label{Width=650,Height=50,Text="FACEIT blokkerer Interception-driveren. Å stoppe filteret avinstallerer ikke driveren.\nBruk bare der Interception er tillatt. Dette vinduet installerer ingen driver."});
+            panel.Controls.Add(new Label{Width=650,Height=50,Text="FACEIT blokkerer Interception-driveren. Å stoppe filteret avinstallerer ikke driveren.\nBruk bare der Interception er tillatt. Oppsett åpnes separat."});
+            panel.Controls.Add(MakeButton(DriverSetup.Text("Installer eller fjern driver","Install or remove driver"),delegate{using(var setup=new DriverSetupForm(true))setup.ShowDialog(this);}));
             panel.Controls.Add(MakeButton("Åpne måling",LoadMeasurement));
             panel.Controls.Add(MakeButton("Finn mus",RefreshDevices));panel.Controls.Add(devices);panel.Controls.Add(start);
             var stopButton=new Button{Text="Stopp",Width=210,Height=35};stopButton.Click+=delegate{stop=true;L.SetText(status,"Stopper …");};panel.Controls.Add(stopButton);panel.Controls.Add(status);
