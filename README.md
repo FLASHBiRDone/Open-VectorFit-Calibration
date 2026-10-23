@@ -1,10 +1,26 @@
 # Open VectorFit Calibration
 
-An open-source Windows tool for measuring your natural mouse movement and testing whether a personalized sensitivity profile improves your aim. Designed for standard mice across brands, without requiring a specific gaming mouse. The application currently displays VectorFit and supports English and Norwegian.
+**Free, open-source mouse calibration and aim testing for Windows.**
 
-Measure a baseline, compare a bounded sensitivity/directional proposal with the measured profile, and repeat the exact same comparison before considering further changes. Flick trials record misses as well as hits. Precision trials count all clicks and time until a hit or deadline. Natural circle measurements estimate typical axis tendencies.
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.13.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/Open-VectorFit-Calibration/releases/download/v0.13.0/Open-VectorFit-Calibration-Windows.zip)
 
-Results distinguish accuracy, hits, speed and uncertainty. A more circular trace or promising result is not proof of improved gameplay. Confirmation keeps the same A/B settings and previous results; it does not calculate or activate another correction.
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/Open-VectorFit-Calibration/releases/download/v0.13.0/Open-VectorFit-Calibration-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/Open-VectorFit-Calibration/releases/tag/v0.13.0) · [Roadmap](ROADMAP.md)
+
+Extract the entire ZIP, open the **VectorFit** folder and run **VectorFit.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
+
+Measure your flicks and precision, compare sensitivity profiles, and check whether changes help without simply taking longer. Designed for standard mice across brands.
+
+**Available now:** calibration, A/B testing, repeat confirmation and optional global profiles.
+
+Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimental—not yet a full Aimlabs replacement. Testers and contributors are welcome.
+
+The app supports English and Norwegian. Calibration and local comparisons do not require installing an input driver. Global profiles use optional drivers with separate setup and compatibility considerations.
+
+## Help shape the aim trainer
+
+See the [roadmap](ROADMAP.md) for the proposed path from calibration to broader aim training: reliable onboarding, tracking and target-switching exercises, practice routines, and local progress history.
+
+[Report a bug or suggest an exercise](https://github.com/FLASHBiRDone/Open-VectorFit-Calibration/issues/new). For bug reports, include the app version, Windows version, mouse model, steps to reproduce and expected versus actual behavior. Review logs and screenshots before sharing; you do not need to upload personal measurement files.
 
 ## Mouse compatibility
 
