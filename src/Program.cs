@@ -36,6 +36,12 @@ namespace VectorFit {
                 if(args.Length>1&&args[0]=="--render-circle") {
                     using(var f=new CircleForm(new Setup())){if(Array.IndexOf(args,"cw")>=0||Array.IndexOf(args,"ccw")>=0)f.PreviewTransition(Array.IndexOf(args,"cw")>=0);else f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
+                if(args.Length>1&&args[0]=="--render-practice"){
+                    using(var f=new PracticeForm(new Setup(),args.Length>2?args[2]:"tracking",60,"preview")){f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                }
+                if(args.Length>2&&args[0]=="--render-replay"){
+                    using(var f=new ReplayForm(Session.FromJson(File.ReadAllText(args[2])))){f.Preview();f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                }
                 if(args.Length>1&&args[0]=="--render-aim") {
                     using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }

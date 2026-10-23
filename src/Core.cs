@@ -100,6 +100,7 @@ namespace VectorFit {
         }
         public Correction Correction=new Correction(); public CurveProfile Curve=new CurveProfile();
         public bool FitReady, Repeatable, ValidationPassed;
+        public bool RobustConfirmation;
         public string Notes="";
         public double ReferenceReach;
         [JsonIgnore] public bool UsesInterception { get { return Mode==ProfileMode.Interception; } }

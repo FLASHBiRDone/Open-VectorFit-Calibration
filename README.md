@@ -4,15 +4,15 @@
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.18.2-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.18.2/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.19.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.0/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.18.2/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.18.2) · [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.19.0) · [Roadmap](ROADMAP.md)
 
 Extract the entire ZIP, open the **TrueTrack** folder and run **TrueTrack.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
 Measure your flicks and precision, compare sensitivity profiles, and check whether changes help without simply taking longer. Designed for standard mice across brands.
 
-**Available now:** optional 3D training room, fixed first-test baseline, explained recommendations, balanced target distances, optional measured circle verification, expanded flick scoring rings, precision-first assessment, four before/after gauges, calibration, A/B testing, repeat confirmation, optional game setup with FOV and preferred cm/360, blind distance estimation, and optional global profiles.
+**Available now:** free flick/precision/tracking/target-switching practice, saved routines and comparable practice history, movement replay, optional three-check profile confirmation, optional 3D training room, fixed first-test baseline, explained recommendations, balanced target distances, optional measured circle verification, expanded flick scoring rings, precision-first assessment, four before/after gauges, calibration, A/B testing, repeat confirmation, optional game setup with FOV and preferred cm/360, blind distance estimation, and optional global profiles.
 
 Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimental—not yet a full Aimlabs replacement. Testers and contributors are welcome.
 
@@ -96,7 +96,7 @@ Requires Windows x64, .NET Framework 4.7.2 or later and Windows PowerShell. Obta
 Outputs are in artifacts/TrueTrack. Run TrueTrack.exe. Tests can be run without installing or activating a driver:
 
     $report = Join-Path $PWD 'artifacts\tests.txt'
-    Start-Process .\artifacts\VectorFit\VectorFit.Tests.exe -ArgumentList '--selftest', $report -Wait
+    Start-Process .\artifacts\TrueTrack\VectorFit.Tests.exe -ArgumentList '--selftest', $report -Wait
     Get-Content $report
 
 Optional tests of historical local measurements are skipped when those private files are absent. No user measurements are distributed.

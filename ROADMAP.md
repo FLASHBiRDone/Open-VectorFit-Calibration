@@ -9,7 +9,7 @@ This is a direction for development, not a delivery schedule. Planned features a
 - [x] Flick and precision measurement with separate accuracy and timing metrics.
 - [x] Bounded sensitivity and directional calibration proposals.
 - [x] Natural-circle tendency analysis.
-- [x] Paired A/B comparisons and repeat confirmation of the same proposal.
+- [x] Paired A/B comparisons, uncertainty intervals and optional three-check confirmation of the same proposal.
 - [x] Local measurement history and English/Norwegian interface.
 - [x] A Windows download that does not require building from source.
 - [x] Optional Raw Accel setup, neutral reset and profile restoration.
@@ -30,9 +30,11 @@ These features are implemented; their presence does not establish effectiveness 
 ## 2. Add a core aim-training library
 
 - [ ] Dedicated flick exercises with configurable target size, distance and cadence.
-- [ ] Smooth and reactive tracking exercises.
-- [ ] Target-switching exercises.
-- [ ] Small-target precision and micro-adjustment exercises.
+- [x] Smooth tracking exercise.
+- [ ] Reactive tracking exercises.
+- [x] Target-switching exercise with four visible targets.
+- [x] Free precision practice.
+- [ ] Dedicated micro-adjustment scenarios.
 - [ ] Consistent sensitivity and field-of-view configuration, with clearly documented assumptions.
 
 Training exercises should work without a global input driver. Driver-based calibration remains optional.
@@ -41,10 +43,12 @@ Training exercises should work without a global input driver. Driver-based calib
 
 ## 3. Build useful practice and progression
 
-- [ ] Save and replay local practice routines.
-- [ ] Add session summaries and longer-term progress charts.
-- [ ] Report speed, accuracy and consistency separately so slower play is not automatically rewarded.
-- [ ] Compare equivalent tasks and settings across sessions.
+- [x] Save and run a local practice routine.
+- [x] Replay recorded movement and clicks.
+- [x] Session summaries and comparable practice history charts.
+- [x] Report throughput, accuracy and successful-hit time separately.
+- [ ] Additional consistency metrics.
+- [x] Compare equivalent tasks, settings, durations and input profiles across sessions.
 - [ ] Offer transparent difficulty adjustments and optional practice suggestions.
 
 **Milestone:** users can identify what changed and choose what to practice next without being promised a universal “perfect” sensitivity.

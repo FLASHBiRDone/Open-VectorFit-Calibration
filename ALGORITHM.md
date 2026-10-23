@@ -2,6 +2,26 @@
 
 This document describes the algorithm used for new calibration sessions. Thresholds are engineering choices unless explicitly identified as statistical tests. The software measures performance and tests bounded proposals; it does not guarantee better aim or identify a hardware defect.
 
+## Free practice and routines
+
+The Practice page is separate from profile fitting. It offers flick, precision, smooth tracking and target switching in the 3D room, for 30, 60 or 120 active seconds each. Users can save a selected sequence as their local routine. Each exercise waits for a click; focus loss pauses the active clock and releases mouse capture. No profile is fitted or activated. Practice consumes relative raw input as delivered by Windows, without applying another local correction. The optional Interception bridge must be stopped before practice. DPI, cm/360 and horizontal FOV come from the setup page.
+
+Tracking follows a fixed smooth path in angular coordinates: yaw = 18 sin(0.67t), pitch = 9 sin(1.13t), with t in seconds and a 1.5-degree target radius. Time on target is duration-weighted, not an average over input events. Gaps over 50 ms are excluded from observed time; sessions with less than 95% capture coverage are not included in comparative history. This is smooth tracking, not a reactive tracking exercise.
+
+Target switching displays four fixed positions (+/-14 degrees horizontally, +/-7 vertically); only the highlighted target counts. A hit selects a different target. Flick advances on the first click including misses. Precision retains the same target and clock through misses, until hit or 3000 ms timeout. Flick and precision use seeded sequences at 8/14 degrees from the current view, a 250 ms onset delay, and 1/0.45-degree target radii respectively. The exercise version, duration, setup, input configuration fingerprint and selected mouse are stored. Training protocols differ from calibration and must not be pooled with calibration trials.
+
+Practice history uses only complete sessions with matching exercise, duration, protocol, setup, device and input fingerprint. It displays time-on-target for tracking; clicking tasks report hits per minute, click accuracy and median successful-hit time separately. Misses and timeouts reduce throughput; successful-hit time alone is not an overall score. A changed or unknown driver configuration receives a unique fingerprint so it cannot silently join another history group. Trends are descriptive and include practice, fatigue and daily variation. Data are stored under profiles/practice; the saved routine is profiles/practice-routine.json. Existing update preservation covers both.
+
+## Movement replay
+
+Replay shows the stored angular path and click timestamps, with a trial selector, seek bar and 0.25x/0.5x/1x playback. Green marks targets and successful clicks; red marks missed clicks. Calibration trials include the recorded trajectory-derived corrective travel. Practice replay also follows the moving target. This is an angular-coordinate visualization of recorded samples, not a video or exact frame reconstruction. Missing legacy movement data are reported instead of synthesized. Replay does not change measurements or profiles.
+
+## Optional three-check profile confirmation
+
+The existing matched, counterbalanced A/B presentation keeps the active profile label hidden. An optional three-check confirmation mode freezes the same proposal and requires three consecutive completed comparisons with the same fingerprint, passing the existing outcome safeguards and a supporting precision interval. The initial comparison may count; incomplete comparisons do not. No additional correction is fitted between checks. A failed or unsupported check prevents approval until three consecutive supported results have been collected.
+
+For each structurally valid set of 16 precision A/B pairs, bootstrap the mean within-pair A-minus-B difference using 2000 resamples with a fixed random seed. Report a descriptive 95% interval for time saved and, when all trajectories are available, reduction in corrective travel (percentage points). Positive values favor B. At least one interval must have a positive lower endpoint, in addition to existing accuracy/time/benefit safeguards. Prior results without saved supporting evidence do not qualify for this stricter mode. This is a practical uncertainty and repetition check, not a preregistered significance claim: multiple outcomes and repeated testing are not familywise-error corrected. The interface recommends spacing checks across days and does not claim to eliminate practice effects or fatigue.
+
 ## Optional arena presentation
 
 Before starting a new baseline, users may select the 3D training room. It is a stationary viewpoint with mouse-driven camera rotation, a central crosshair and an original, low-contrast room. The classic view remains available. Both presentations use the same target projection, angular distances, scoring areas, input transformation and timing rules. The room is visual context, not a separate sensitivity correction or a claim of measured transfer to a game.

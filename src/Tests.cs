@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -31,6 +31,25 @@ namespace VectorFit {
         public static int Run(string path) {
             log=new List<string>();checks=0;
             try{
+                var practiceIntegrated=new PracticeResult();Practice.Integrate(practiceIntegrated,10,true,2);Practice.Integrate(practiceIntegrated,30,false,4);Practice.Integrate(practiceIntegrated,500,true,0);
+                Check(practiceIntegrated.ObservedMs==40&&practiceIntegrated.Tracking==25&&practiceIntegrated.ErrorIntegral==140,"Tracking uses elapsed time weighting and excludes long stalls");
+                Check(Practice.Inside(new PointD(12,-4),12,-4,1)&&!Practice.Inside(new PointD(12,-4),0,0,1),"Practice uses the same perspective target hit geometry");
+                var pr=new PracticeResult{Setup=new Setup(),Input="neutral",Device="mouse",Mode="tracking",Seconds=60,Complete=true,Elapsed=60000,ObservedMs=60000};var pr2=JObject.FromObject(pr).ToObject<PracticeResult>();Check(pr.Comparable(pr2),"Equivalent complete practice sessions can be compared");pr2.Seconds=30;Check(!pr.Comparable(pr2),"Different exercise lengths are excluded from practice trends");pr2.Seconds=60;pr2.Input="different";Check(!pr.Comparable(pr2),"Different active input profiles are excluded from practice trends");pr2.Input="neutral";pr2.ObservedMs=100;Check(!pr.Comparable(pr2),"Low capture coverage cannot enter practice trends");
+                Check(ProfileEvidence.Interval(Enumerable.Repeat(0.0,16).ToArray()).All(v=>v==0),"Identical profiles show zero estimated paired gain");
+                Check(ProfileEvidence.Interval(Enumerable.Range(0,16).Select(i=>i%2==0?-20.0:20).ToArray())[0]<0,"Mixed profile effects retain uncertainty around zero");
+                Check(ProfileEvidence.Interval(Enumerable.Repeat(6.0,16).ToArray())[0]==6,"Consistent paired gains retain their measured scale");
+                var pf=typeof(PracticeForm);var flagsPractice=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+                using(var form=new PracticeForm(new Setup(),"precision",60,"neutral")){
+                    pf.GetField("ready",flagsPractice).SetValue(form,false);pf.GetField("running",flagsPractice).SetValue(form,true);pf.GetField("targetStart",flagsPractice).SetValue(form,-100.0);
+                    pf.GetMethod("ClickRaw",flagsPractice).Invoke(form,null);Check(form.Result.Clicks==1&&form.Result.Hits==0&&(double)pf.GetField("targetStart",flagsPractice).GetValue(form)==-100,"Practice precision misses retain the target clock");
+                    pf.GetField("x",flagsPractice).SetValue(form,14.0);pf.GetMethod("ClickRaw",flagsPractice).Invoke(form,null);Check(form.Result.Hits==1&&form.Result.HitTimes.Count==1&&form.Result.HitTimes[0]>=100,"Practice precision hit includes elapsed time before misses");
+                }
+                using(var form=new PracticeForm(new Setup(),"flick",60,"neutral")){
+                    pf.GetField("ready",flagsPractice).SetValue(form,false);pf.GetField("running",flagsPractice).SetValue(form,true);pf.GetMethod("ClickRaw",flagsPractice).Invoke(form,null);Check(form.Result.Attempts==1&&form.Result.Hits==0,"Free flick advances even on a miss");
+                }
+                using(var form=new PracticeForm(new Setup(),"switch",60,"neutral")){
+                    pf.GetField("ready",flagsPractice).SetValue(form,false);pf.GetField("running",flagsPractice).SetValue(form,true);pf.GetField("x",flagsPractice).SetValue(form,14.0);pf.GetMethod("ClickRaw",flagsPractice).Invoke(form,null);Check(form.Result.Hits==1&&(int)pf.GetField("active",flagsPractice).GetValue(form)!=0,"Successful switching chooses a different visible target");
+                }
                 var classic=new Session();var arenaSession=new Session{Setup=new Setup{Arena=true},FitReady=true,Repeatable=true};
                 Check(JObject.FromObject(classic.Setup)["Arena"]==null,"Classic setup omits new flag to retain existing comparison hashes");
                 Check(!History.SameSetup(classic,arenaSession)&&ResultStory.Key(classic)!=ResultStory.Key(arenaSession),"Arena and classic measurements cannot share comparisons or history");
@@ -46,7 +65,7 @@ namespace VectorFit {
                     foreach(double yaw in new[]{0.0,45,90,180,270})foreach(double pitch in new[]{-80.0,0,80})ArenaScene.Draw(graphics,bitmap.Size,103,yaw,pitch);
                     Check(true,"Arena renders safely when looking around, behind and near the ceiling");
                 }
-                Check(AppUpdates.Newer("v0.19.0")&&!AppUpdates.Newer("v0.18.0")&&!AppUpdates.Newer("invalid"),"Update version comparison rejects equal and invalid versions");
+                Check(AppUpdates.Newer("v0.20.0")&&!AppUpdates.Newer("v0.18.0")&&!AppUpdates.Newer("invalid"),"Update version comparison rejects equal and invalid versions");
                 Check(!OutcomeTimeline.Rate(new Trial[0]).HasValue,"Empty hit percentage is unknown");
                 Check(OutcomeTimeline.Rate(new[]{new Trial{Hit=true},new Trial{Hit=false}})==50,"Hit percentage includes misses");
                 Check(!OutcomeTimeline.Rate(new[]{new Trial()}).HasValue,"Legacy unknown hits are not zero percent");
@@ -84,6 +103,7 @@ namespace VectorFit {
                 Check(FlickScoring.Score100(0)==100&&FlickScoring.Score100(5)==1&&FlickScoring.Score100(5.01)==0&&FlickScoring.Score100(Double.NaN)==0,"100-point scoring boundaries");
                 var small=PrecisionPairs(16,1,1);foreach(var tr in small){tr.TotalMs=tr.Corrected?994:1000;tr.Clicks=new List<AimClick>{new AimClick(tr.TotalMs,tr.EndX,tr.EndY,true)};}string smallNote;Check(PrecisionCheck.Improved(small,out smallNote,true,true),"Consistent 0.6 percent improvement passes the new threshold");Check(!PrecisionCheck.Improved(small,out smallNote,true,false),"Historical threshold remains unchanged");foreach(var tr in small.Where(x=>x.Corrected)){tr.TotalMs=997;tr.Clicks.Last().T=997;}Check(!PrecisionCheck.Improved(small,out smallNote,true,true),"0.3 percent gain does not meet practical threshold");
                 foreach(var tr in small.Where(x=>x.Corrected)){tr.TotalMs=994;tr.Clicks.Last().T=994;}var repeated=new Session{SmallGainProtocol=true,ControlPriority=true,PrecisionFirst=true,DualTask=true,FitReady=true,Repeatable=true,Validation=PrecisionPairs(32,1,1),PrecisionValidation=small};Analysis.Validate(repeated);Check(!repeated.ValidationPassed,"First favorable round cannot recommend switching");repeated.PriorComparisons.Add(ResultStory.Record(repeated));repeated.FrozenProposal=true;Analysis.Validate(repeated);Check(repeated.ValidationPassed,"Same proposal passing again unlocks recommendation");repeated.PriorComparisons.Last().Passed=false;Analysis.Validate(repeated);Check(!repeated.ValidationPassed,"Failed prior round cannot confirm a current gain");
+                repeated.PriorComparisons.Clear();repeated.RobustConfirmation=true;repeated.PriorComparisons.Add(ResultStory.Record(repeated));Analysis.Validate(repeated);Check(!repeated.ValidationPassed,"Robust confirmation cannot approve after only two comparisons");repeated.PriorComparisons.Add(ResultStory.Record(repeated));Analysis.Validate(repeated);Check(repeated.ValidationPassed,"Three consistent supported comparisons approve robust confirmation");repeated.PriorComparisons[0].EvidenceSupported=false;Analysis.Validate(repeated);Check(!repeated.ValidationPassed,"A prior comparison without supporting uncertainty bounds blocks robust approval");
                 Check(new Setup().Dpi==1600,"Default DPI is 1600");
                 Check(!new Session().UsesInterception,"New calibrations default to Raw Accel without Interception");
                 using(var global=new GlobalForm()) {
@@ -829,5 +849,3 @@ namespace VectorFit {
         }
     }
 }
-
-

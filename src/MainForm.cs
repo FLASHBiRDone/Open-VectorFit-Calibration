@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace VectorFit {
-    class MainForm:Form {
+    partial class MainForm:Form {
         Color bg=Color.FromArgb(19,24,27),panel=Color.FromArgb(28,34,38),ink=Color.FromArgb(237,244,242),muted=Color.FromArgb(169,184,188),accent=Color.FromArgb(109,218,182);
         Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{SmallGainProtocol=true,ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
         CheckBox arena;TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
@@ -25,9 +25,9 @@ namespace VectorFit {
             var language=new ComboBox{DropDownStyle=ComboBoxStyle.DropDownList,Width=140,Location=new Point(900,10),Anchor=AnchorStyles.Top|AnchorStyles.Right,BackColor=panel,ForeColor=ink,AccessibleName="Language / Språk",Tag="language"};
             language.Items.AddRange(new object[]{"Norsk","English"});language.SelectedIndex=L.English?1:0;head.Controls.Add(language);
             language.SelectedIndexChanged+=delegate{Guard(delegate{L.English=language.SelectedIndex==1;L.Save();ShowPage(pageIndex);if(global!=null&&!global.IsDisposed)L.Controls(global);});};
-            var tabs=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false};nav=new Button[5];
-            string[] names={"Kalibrer","Resultat",DriverSetup.Text("Windows / spill","Windows / games"),"Statistikk",DriverSetup.Text("Historikk / oppdatering","History / updates")};
-            for(int i=0;i<nav.Length;i++){int n=i;nav[i]=Button(names[i],delegate{ShowPage(n);},175);tabs.Controls.Add(nav[i]);}root.Controls.Add(tabs,0,1);
+            var tabs=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false};nav=new Button[6];
+            string[] names={"Kalibrer","Resultat",DriverSetup.Text("Windows / spill","Windows / games"),"Statistikk",DriverSetup.Text("Historikk / oppdatering","History / updates"),DriverSetup.Text("Trening","Practice")};
+            for(int i=0;i<nav.Length;i++){int n=i;nav[i]=Button(names[i],delegate{ShowPage(n);},140);tabs.Controls.Add(nav[i]);}root.Controls.Add(tabs,0,1);
             content=new Panel{Dock=DockStyle.Fill,Padding=new Padding(0,16,0,0)};root.Controls.Add(content,0,2);
             var footer=new TableLayoutPanel{Dock=DockStyle.Fill,RowCount=2,ColumnCount=1,Margin=new Padding(0)};footer.RowStyles.Add(new RowStyle(SizeType.Absolute,5));footer.RowStyles.Add(new RowStyle(SizeType.Percent,100));
             progress=new ProgressStrip{Dock=DockStyle.Fill,Maximum=144,Margin=new Padding(0)};footer.Controls.Add(progress,0,0);
@@ -47,8 +47,8 @@ namespace VectorFit {
         void ShowPage(int index) {
             if(pageIndex==0&&mouse!=null&&!mouse.IsDisposed)draft=new Setup{Mouse=mouse.Text,Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value,Arena=arena!=null&&arena.Checked};
             pageIndex=index;foreach(Control old in content.Controls.Cast<Control>().ToArray())old.Dispose();for(int i=0;i<nav.Length;i++){nav[i].BackColor=i==index?accent:panel;nav[i].ForeColor=i==index?bg:ink;}
-            if(index==0)SetupPage();else if(index==1)ResultPage();else if(index==2)DriverPage();else if(index==3)StatisticsPage();else HistoryPage();
-            UpdateProgress();L.Controls(this);
+            if(index==0)SetupPage();else if(index==1)ResultPage();else if(index==2)DriverPage();else if(index==3)StatisticsPage();else if(index==4)HistoryPage();else PracticePage();
+            nav[5].Text=Practice.Text("Trening","Practice");UpdateProgress();L.Controls(this);
         }
 #if DEVELOPMENT
         public void PreviewPage(int index,string path=null,bool interception=false){
@@ -291,6 +291,9 @@ namespace VectorFit {
             else if(!session.ValidationPassed){actions.Controls.Add(Button(DriverSetup.Text("Gjenta samme sammenligning","Repeat this comparison"),ConfirmProposal,350,true));}
             else actions.Controls.Add(Button(DriverSetup.Text("Velg profil for Windows og spill","Choose profile for Windows and games"),delegate{ShowPage(2);},380,true));
             actions.Controls.Add(Button(DriverSetup.Text("Historikk og tilbakeføring","History and restore"),delegate{ShowPage(4);},280));Add(stack,actions);
+            var review=new FlowLayoutPanel{Height=52};review.Controls.Add(Button(Practice.Text("Spill av bevegelsene","Replay movements"),delegate{using(var replay=new ReplayForm(session))replay.ShowDialog(this);},270));
+            if(session.FitReady)review.Controls.Add(Button(Practice.Text("Bekreft med tre skjulte kontroller","Confirm with three blind checks"),delegate{session.RobustConfirmation=true;ConfirmProposal();},370));Add(stack,review);
+            if(compared)AddDetails(stack,Practice.Text("Hvor sikker er profileffekten?","How certain is the profile effect?"),TextLabel(ProfileEvidence.Summary(session),11,false,190));
             if(!session.FitReady)return;
             if(!compared){Add(stack,new ProposalView(session));Add(stack,TextLabel(DriverSetup.Text("Etter-resultatet vises først når du har målt med begge profilene. Testen bruker korreksjonen lokalt; global aktivering er et eget valg.","After-results appear only after measuring both profiles. The test applies the correction locally; global activation is a separate choice."),11,false,60));}
             else {Add(stack,new OutcomeTimeline(session));AddDetails(stack,DriverSetup.Text("Etterkorrigering, flick og gjennomsnitt","Corrective travel, flick and averages"),new ConfigGauges(session),TextLabel(ResultStory.SimpleSummary(session),11,false,110));AddDetails(stack,DriverSetup.Text("Hvorfor denne anbefalingen?","Why this recommendation?"),Narrative(session));}
