@@ -202,3 +202,7 @@ New baselines store Setup.DottedCalibration=true and use a low-contrast projecte
 ## Crosshair configuration
 
 Customize crosshair offers cross, dot, ring, ring with dot, ring with cross, and ring with ticks and dot; six colors, size, gap and thickness have a live preview. Preferences are stored locally in profiles/crosshair.json. New baselines snapshot the selection in Setup.Crosshair; continuation and confirmation preserve it, and history equivalence includes it. Practice snapshots the current preference when starting. Legacy measurements without this field retain the original crosshair. This only draws inside TrueTrack; no desktop/game overlay is installed or activated.
+
+## Welcome and instruction presentation
+
+On startup a minimal welcome screen previews the current crosshair and offers optional customization before continuing. Existing preferences are retained. The default for new preferences is a larger cyan cross with a dark outline and open centre. Existing measurement snapshots retain their previous crosshair. Circle-test instructions fade into the centre and wait for a click, then fade out before countdown and recording. Progress bars show counts and percentages in a 32–34 pixel bar. Flick centres are red; precision targets remain green. These presentation changes do not change scoring thresholds or acceptance rules.

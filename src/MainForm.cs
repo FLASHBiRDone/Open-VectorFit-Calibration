@@ -18,7 +18,7 @@ namespace VectorFit {
             Text="TrueTrack | Kalibrering og global profil";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
             StartPosition=FormStartPosition.CenterScreen;BackColor=bg;ForeColor=ink;Font=new Font("Segoe UI",14,FontStyle.Regular,GraphicsUnit.Pixel);AutoScaleMode=AutoScaleMode.None;
             var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Padding=new Padding(30,20,30,18)};
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute,85));root.RowStyles.Add(new RowStyle(SizeType.Absolute,53));root.RowStyles.Add(new RowStyle(SizeType.Percent,100));root.RowStyles.Add(new RowStyle(SizeType.Absolute,48));Controls.Add(root);
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute,85));root.RowStyles.Add(new RowStyle(SizeType.Absolute,53));root.RowStyles.Add(new RowStyle(SizeType.Percent,100));root.RowStyles.Add(new RowStyle(SizeType.Absolute,66));Controls.Add(root);
             var head=new Panel{Dock=DockStyle.Fill};head.Controls.Add(new Label{Text="TrueTrack",Font=new Font("Segoe UI",34,FontStyle.Bold,GraphicsUnit.Pixel),ForeColor=ink,AutoSize=true,Location=new Point(75,0)});
             head.Controls.Add(new Label{Text="Mål bevegelsene. Test en personlig retningsprofil.",AutoSize=true,ForeColor=muted,Location=new Point(78,51)});root.Controls.Add(head,0,0);
             using(var stream=typeof(MainForm).Assembly.GetManifestResourceStream("TrueTrack.Logo")){if(stream!=null){using(var loaded=Image.FromStream(stream)){var logo=new PictureBox{Image=new Bitmap(loaded),SizeMode=PictureBoxSizeMode.Zoom,Location=new Point(0,0),Size=new Size(66,66),AccessibleName="TrueTrack"};logo.Disposed+=delegate{logo.Image.Dispose();};head.Controls.Add(logo);}}}
@@ -29,7 +29,7 @@ namespace VectorFit {
             string[] names={"Kalibrer","Resultat",DriverSetup.Text("Windows / spill","Windows / games"),"Statistikk",DriverSetup.Text("Historikk / oppdatering","History / updates"),DriverSetup.Text("Trening","Practice")};
             for(int i=0;i<nav.Length;i++){int n=i;nav[i]=Button(names[i],delegate{ShowPage(n);},140);tabs.Controls.Add(nav[i]);}root.Controls.Add(tabs,0,1);
             content=new Panel{Dock=DockStyle.Fill,Padding=new Padding(0,16,0,0)};root.Controls.Add(content,0,2);
-            var footer=new TableLayoutPanel{Dock=DockStyle.Fill,RowCount=2,ColumnCount=1,Margin=new Padding(0)};footer.RowStyles.Add(new RowStyle(SizeType.Absolute,14));footer.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            var footer=new TableLayoutPanel{Dock=DockStyle.Fill,RowCount=2,ColumnCount=1,Margin=new Padding(0)};footer.RowStyles.Add(new RowStyle(SizeType.Absolute,34));footer.RowStyles.Add(new RowStyle(SizeType.Percent,100));
             progress=new ProgressStrip{Dock=DockStyle.Fill,Maximum=144,Margin=new Padding(0)};footer.Controls.Add(progress,0,0);
             status=new Label{Dock=DockStyle.Fill,TextAlign=ContentAlignment.BottomLeft,ForeColor=muted,Font=new Font("Segoe UI",12,FontStyle.Regular,GraphicsUnit.Pixel)};footer.Controls.Add(status,0,1);root.Controls.Add(footer,0,3);
             FormClosing+=delegate{if(global!=null&&!global.IsDisposed)global.Close();};RefreshDriver();ShowPage(0);Shown+=delegate{if(AppUpdates.Enabled)AppUpdates.Check(this,true);};
@@ -73,11 +73,11 @@ namespace VectorFit {
             dpi=Number(draft.Dpi,100,50000,0);cm=Number(draft.Cm360,3,200,1);fov=Number(draft.Hfov,60,140,0);
             fields.Controls.Add(mouse,0,1);fields.Controls.Add(dpi,1,1);fields.Controls.Add(cm,2,1);fields.Controls.Add(fov,3,1);Add(stack,fields);
             var buttons=new FlowLayoutPanel{Height=52};buttons.Controls.Add(Button("Start kalibrering",delegate{Start(false);},230,true));buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,230));buttons.Controls.Add(Button(L.English?"Game setup / blind measurement":"Spilloppsett / blindmåling",OpenGameSetup,320));Add(stack,buttons);
-            Add(stack,Button(DriverSetup.Text("Tilpass sikte","Customize crosshair"),delegate{using(var editor=new SightEditor())editor.ShowDialog(this);},260));
             var choices=new TableLayoutPanel{Height=64,ColumnCount=2,RowCount=2};choices.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,68));choices.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,32));
             var circle=CircleChoice();var sensitivity=SensitivityChoice();circle.Dock=DockStyle.Fill;sensitivity.Dock=DockStyle.Fill;
             arena=new CheckBox{Text=L.English?"Moving dot background":"Prikkebakgrunn i bevegelse",Checked=true,Enabled=false,Dock=DockStyle.Fill,ForeColor=ink};
             choices.Controls.Add(circle,0,0);choices.Controls.Add(arena,1,0);choices.Controls.Add(sensitivity,0,1);choices.SetColumnSpan(sensitivity,2);Add(stack,choices);
+            Add(stack,Button(DriverSetup.Text("Tilpass sikte","Customize crosshair"),delegate{using(var editor=new SightEditor())editor.ShowDialog(this);},260));
             Add(stack,TextLabel(L.English?"The environment stays the same for baseline and proposal. Choose it before starting a new baseline.":"Miljøet er likt for baseline og forslag. Velg det før du starter en ny baseline.",10,false,30));
             Add(stack,TextLabel(DriverSetup.Text("1. Sentrer musen og bruk et komfortabelt grep.\n2. Flick: klikk én gang, også når du bommer. Presisjon: fortsett til treff.\n3. Se forslaget før du tester eller aktiverer det.","1. Center your mouse and use a comfortable grip.\n2. Flick: click once, even on a miss. Precision: keep going until a hit.\n3. Review the proposal before testing or activating it."),11,false,82));
             Add(stack,TextLabel("Fase 1 samler baseline og foreslår innstillinger. Velg forslaget for å starte fase 2 med korrigeringen aktiv. Hver fase har flick og presisjon, med instruksjoner og klikk for å starte hver del. Senere faser kontrollerer neste forslag.",10,false,43));

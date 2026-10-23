@@ -253,7 +253,7 @@ namespace VectorFit {
                 Action<string,Font,Brush,float,float> line=(text,font,brush,y,h)=>g.DrawString(L.T(text),font,brush,new RectangleF(left,y,width,h),sf);
                 line(confirmation?"BEKREFTELSE · SAMME A OG B":"FASE "+round+(validation?" · A/B-KONTROLL":baselineOnly?" · BASELINE":" · MÅLING MED FASEPROFIL"),instructionFont,Brushes.White,top,40);
                 line(PartTitle,headingFont,Brushes.White,top+46,55);
-                line(precision?"Treff den grønne prikken så raskt du klarer med kontroll.":"Sikt raskt mot den grønne prikken og klikk én gang.",instructionFont,Brushes.White,top+112,52);
+                line(precision?"Treff den grønne prikken så raskt du klarer med kontroll.":DriverSetup.Text("Sikt raskt mot det røde sentrumet og klikk én gang.","Aim quickly at the red centre and click once."),instructionFont,Brushes.White,top+112,52);
                 line(precision?"Ved bom: korriger og klikk igjen på samme mål. Klokken fortsetter.":"Første klikk går videre, også ved bom. Ikke vent for å finjustere.",instructionFont,Brushes.White,top+172,68);
                 line("Maks 3 sekunder per mål. Både tid og treff teller.",detailFont,Brushes.White,top+250,40);
                 line(DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger. Finn en behagelig håndstilling.","Center your mouse on the pad, with room in every direction. Find a comfortable hand position."),detailFont,Brushes.White,top+294,58);
@@ -297,8 +297,7 @@ namespace VectorFit {
                 g.DrawString(instruction,body,Brushes.White,30,h-83);
                 var progress=Progress;g.DrawString(progress.Label,small,muted,30,h-56);
                 using(var right=new StringFormat{Alignment=StringAlignment.Far})g.DrawString("Esc · "+DriverSetup.Text("Avslutt","Exit")+"   /   Alt+Tab · "+DriverSetup.Text("Pause","Pause"),small,muted,new RectangleF(w-330,h-29,300,22),right);
-                using(var track=new SolidBrush(Color.FromArgb(48,60,63)))g.FillRectangle(track,30,h-34,w-390,14);
-                g.FillRectangle(mint,30,h-34,(float)((w-390)*progress.Fraction),14);
+                ProgressStrip.DrawBar(g,new RectangleF(30,h-38,w-390,32),progress.Fraction,progress.Done+" / "+progress.Total);
             }
         }
         static readonly PointD[] calibrationDots=MakeCalibrationDots();
@@ -327,7 +326,7 @@ namespace VectorFit {
                 float radius=TargetRadius;
                 if(rings&&!precision)for(int ring=5;ring>=2;ring--){float rr=radius*(largeTargets&&setup.WideFlick?1+19f*(ring-1)/4: ring);using(var fill=new SolidBrush(Color.FromArgb(32+ring*7,64,114,126)))g.FillEllipse(fill,p.X-rr,p.Y-rr,rr*2,rr*2);using(var line=new Pen(Color.FromArgb(150,153,193,199),1))g.DrawEllipse(line,p.X-rr,p.Y-rr,rr*2,rr*2);}
 
-                using(var brush=new SolidBrush(Color.FromArgb(109,218,182)))g.FillEllipse(brush,p.X-radius,p.Y-radius,2*radius,2*radius);
+                using(var brush=new SolidBrush(precision?Color.FromArgb(109,218,182):Color.FromArgb(255,82,91)))g.FillEllipse(brush,p.X-radius,p.Y-radius,2*radius,2*radius);
                 using(var pen=new Pen(Color.FromArgb(160,109,218,182),1))g.DrawEllipse(pen,p.X-radius-5,p.Y-radius-5,2*radius+10,2*radius+10);
             }else {
                 string text=L.T(dualTask&&(phase=="ready"||phase=="intro-out")?"":phase=="countdown"?"":phase=="ready"?"Klikk når du er klar":feedback);
@@ -343,8 +342,7 @@ namespace VectorFit {
             DrawEffects(g);
             if(setup.Arena){DrawArenaHud(g);return;}
             var progress=Progress;
-            using(var track=new SolidBrush(Color.FromArgb(40,49,54)))g.FillRectangle(track,32,Height-55,Width-64,14);
-            using(var fill=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(fill,32,Height-55,(float)((Width-64)*progress.Fraction),14);
+            ProgressStrip.DrawBar(g,new RectangleF(32,Height-65,Width-64,32),progress.Fraction,progress.Done+" / "+progress.Total);
             using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,progress.Label,small,brush,32,Height-82);
         }
     }

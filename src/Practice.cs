@@ -70,7 +70,7 @@ namespace VectorFit {
   protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;ArenaScene.Draw(g,ClientSize,Result.Setup.Hfov,x,y);
    float f=(float)(ClientSize.Width/(2*Math.Tan(Result.Setup.Hfov*Math.PI/360))),r=f*(float)Math.Tan(Radius*Math.PI/180);
    if(Result.Mode=="switch")for(int i=0;i<4;i++){var p=Project(Practice.Spots[i]);using(var pen=new Pen(Color.FromArgb(90,120,123),2))g.DrawEllipse(pen,p.X-r,p.Y-r,r*2,r*2);}
-   if(clock.Elapsed.TotalMilliseconds>=nextOnset){var p=Project(target);using(var b=new SolidBrush(Color.FromArgb(109,218,182)))g.FillEllipse(b,p.X-r,p.Y-r,r*2,r*2);}
+   if(clock.Elapsed.TotalMilliseconds>=nextOnset){var p=Project(target);using(var b=new SolidBrush(Result.Mode=="flick"?Color.FromArgb(255,82,91):Color.FromArgb(109,218,182)))g.FillEllipse(b,p.X-r,p.Y-r,r*2,r*2);}
    int cx=ClientSize.Width/2,cy=ClientSize.Height/2;Sight.Draw(g,cx,cy,Result.Setup.Crosshair);
    using(var b=new SolidBrush(Color.FromArgb(19,24,27))){g.FillRectangle(b,0,0,ClientSize.Width,90);g.FillRectangle(b,0,ClientSize.Height-80,ClientSize.Width,80);}
    g.DrawString("TRUETRACK / "+Practice.Name(Result.Mode),heading,Brushes.White,28,16);

@@ -28,7 +28,13 @@ namespace VectorFit {
     class ProgressStrip:Control {
         public int Value,Maximum=144;
         public ProgressStrip(){DoubleBuffered=true;AccessibleRole=AccessibleRole.ProgressBar;}
-        protected override void OnPaint(PaintEventArgs e){e.Graphics.Clear(Color.FromArgb(45,57,62));using(var fill=new SolidBrush(Color.FromArgb(109,218,182)))e.Graphics.FillRectangle(fill,0,0,Width*(float)Math.Min(Maximum,Value)/Maximum,Height);}
+        protected override void OnPaint(PaintEventArgs e){DrawBar(e.Graphics,ClientRectangle,Maximum<=0?0:(double)Value/Maximum,Value+" / "+Maximum);}
+        public static void DrawBar(Graphics g,RectangleF area,double fraction,string count){
+            fraction=Analysis.Clamp(fraction,0,1);
+            using(var track=new SolidBrush(Color.FromArgb(45,57,62)))using(var fill=new SolidBrush(Color.FromArgb(109,218,182))){g.FillRectangle(track,area);g.FillRectangle(fill,area.X,area.Y,(float)(area.Width*fraction),area.Height);}
+            string label=count+"   ·   "+Math.Floor(fraction*100).ToString("0")+" %";
+            using(var font=new Font("Segoe UI",16,FontStyle.Bold,GraphicsUnit.Pixel))using(var sf=new StringFormat{Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center})using(var shade=new SolidBrush(Color.FromArgb(19,24,27))){var size=g.MeasureString(label,font);g.FillRectangle(shade,area.X+(area.Width-size.Width-24)/2,area.Y+3,size.Width+24,area.Height-6);g.DrawString(label,font,Brushes.White,area,sf);}
+        }
     }
     public class CalibrationProgress {
         public int Round=1,Warmup,Measured,Compared,PrecisionMeasured,PrecisionCompared;

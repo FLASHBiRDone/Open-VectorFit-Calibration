@@ -20,6 +20,9 @@ namespace VectorFit {
                 if(Array.IndexOf(args,"en")>=0)L.English=true;
                 if(args.Length>2&&args[0]=="--render-map") {var session=Session.FromJson(File.ReadAllText(args[2]));using(var map=new DirectionMap(session)){map.Width=950;using(var bmp=new Bitmap(map.Width,map.Height)){map.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;}
 
+                if(args.Length>1&&args[0]=="--render-welcome"){
+                    using(var f=new WelcomeForm()){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();f.Preview();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                }
                 if(args.Length>1&&args[0]=="--render-crosshair"){
                     using(var f=new SightEditor()){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
@@ -37,7 +40,7 @@ namespace VectorFit {
                     using(var f=new ActiveProfileDialog(true,"Den aktive Raw Accel-profilen stemmer ikke med oppsettet denne målingen krever.")){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}f.Close();}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-circle") {
-                    using(var f=new CircleForm(new Setup())){if(Array.IndexOf(args,"cw")>=0||Array.IndexOf(args,"ccw")>=0)f.PreviewTransition(Array.IndexOf(args,"cw")>=0);else f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                    using(var f=new CircleForm(new Setup())){if(Array.IndexOf(args,"cw")>=0||Array.IndexOf(args,"ccw")>=0)f.PreviewTransition(Array.IndexOf(args,"cw")>=0);else if(Array.IndexOf(args,"intro")>=0)f.PreviewIntro();else f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-practice"){
                     using(var f=new PracticeForm(new Setup(),args.Length>2?args[2]:"tracking",60,"preview")){f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
@@ -46,7 +49,7 @@ namespace VectorFit {
                     using(var f=new ReplayForm(Session.FromJson(File.ReadAllText(args[2])))){f.Preview();f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-aim") {
-                    using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{DottedCalibration=true,WideFlick=true,Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                    using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{Crosshair=Sight.DefaultJson(),DottedCalibration=true,WideFlick=true,Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render") {
                     using(var f=new MainForm()){
@@ -63,6 +66,9 @@ namespace VectorFit {
                 }
 #endif
                 Application.ThreadException+=delegate(object sender,System.Threading.ThreadExceptionEventArgs e){UiMessage.Show(e.Exception.Message,"TrueTrack");};
+#if !DEVELOPMENT
+                using(var welcome=new WelcomeForm()){if(welcome.ShowDialog()!=DialogResult.OK)return 0;}
+#endif
                 Application.Run(new MainForm());return 0;
             }catch(Exception e){
                 if(args.Length>0){File.WriteAllText(Path.Combine(Driver.Root,"startup-error.txt"),e.ToString());return 1;}

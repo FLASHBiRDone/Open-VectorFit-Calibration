@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,17 +10,19 @@ namespace VectorFit {
         readonly Setup setup;readonly Correction input;readonly List<CircleLap> plan;readonly Stopwatch clock=Stopwatch.StartNew();readonly Timer timer=new Timer();
         readonly Font title=new Font("Segoe UI",24,FontStyle.Bold,GraphicsUnit.Pixel),body=new Font("Segoe UI",15,GraphicsUnit.Pixel),small=new Font("Segoe UI",13,GraphicsUnit.Pixel);
         public readonly CircleData Data=new CircleData{Protocol=3};public bool Completed;public string DeviceName="";
+        double introShown,introExit;
         CircleTracker tracker;int index;double x,y,deadline,started;string phase="ready",feedback="",transition="";bool captured;IntPtr device=IntPtr.Zero;
         public CircleForm(Setup value,Correction inputCorrection=null){
             setup=value;input=inputCorrection??new Correction();plan=CircleData.Plan();x=plan[0].Radius;
             Text=L.T("VectorFit | Sirkeltest");BackColor=Color.FromArgb(17,21,24);DoubleBuffered=true;KeyPreview=true;AutoScaleMode=AutoScaleMode.None;WindowState=FormWindowState.Maximized;FormBorderStyle=FormBorderStyle.None;
             timer.Interval=16;timer.Tick+=delegate{
                 double now=clock.Elapsed.TotalMilliseconds;
+                if(phase=="intro-out"&&now-introExit>=320)BeginNext(true);
                 if(phase=="countdown"&&now>=deadline)BeginDrawing();
                 if(phase=="drawing"&&now-started>20000){tracker.Lap.Reason="Tiden gikk ut";FinishLap();}
                 Invalidate();
             };
-            Shown+=delegate{CaptureInput();timer.Start();};Deactivate+=delegate{if(captured)Pause();};
+            Shown+=delegate{introShown=clock.Elapsed.TotalMilliseconds;CaptureInput();timer.Start();};Deactivate+=delegate{if(captured)Pause();};
             FormClosing+=delegate{if(tracker!=null){tracker.Lap.Reason="Avsluttet";Data.Laps.Add(tracker.Lap);tracker=null;}};
             KeyDown+=delegate(object sender,KeyEventArgs e){if(e.KeyCode==Keys.Escape){Close();e.Handled=true;}if(e.KeyCode==Keys.Space&&phase=="paused"){CaptureInput();BeginNext(true);e.Handled=true;}};
         }
@@ -45,7 +47,7 @@ namespace VectorFit {
                     if(device==IntPtr.Zero&&(buttons&1)!=0){string name=Native.Name(handle);if(setup.Device!=""&&setup.Device!=name){feedback="Bruk samme mus og tilkobling som i kalibreringen.";}else{device=handle;DeviceName=name;}}
                     if(device!=IntPtr.Zero&&device==handle){
                         if(phase=="drawing"&&(dx!=0||dy!=0)){x+=dx*setup.DegreesPerCount;y+=dy*setup.DegreesPerCount;if(tracker.Add(x,y,clock.Elapsed.TotalMilliseconds))FinishLap();}
-                        if((buttons&1)!=0&&phase=="ready")BeginNext(true);
+                        if((buttons&1)!=0&&phase=="ready"){introExit=clock.Elapsed.TotalMilliseconds;phase="intro-out";}
                     }
                 }
             }base.WndProc(ref message);
@@ -64,14 +66,28 @@ namespace VectorFit {
                     var sizeText=g.MeasureString(L.T(countdown),body);PaintText.Draw(g,countdown,body,ink,cx-sizeText.Width/2,cy+48);
                 }
                 float pointerX=(float)(cx+x*scale),pointerY=(float)(cy+y*scale);using(var pen=new Pen(Color.FromArgb(237,244,242),1.5f)){g.DrawLine(pen,pointerX-9,pointerY,pointerX+9,pointerY);g.DrawLine(pen,pointerX,pointerY-9,pointerX,pointerY+9);}
-                if(phase=="ready")PaintText.Draw(g,DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger.","Center your mouse on the pad, with room in every direction."),body,ink,32,Height-145);
                 string instruction=phase=="ready"?DriverSetup.Text("Ingen krav til fine eller lukkede sirkler. Alle forsøk teller. Klikk for å starte.","No need for neat or closed circles. Every attempt counts. Click to start."):phase=="paused"?"Pause. Trykk mellomrom for å fortsette.":phase=="countdown"?"Gjør deg klar. Finn en behagelig bevegelse.":"La formen falle naturlig. Det er ingen punkter du må treffe.";
-                PaintText.Draw(g,instruction,body,ink,32,Height-112);
+                if(phase!="ready"&&phase!="intro-out")PaintText.Draw(g,instruction,body,ink,32,Height-112);
                 if(feedback!="")PaintText.Draw(g,feedback,small,muted,32,Height-137);
-                PaintText.Draw(g,"Datainnhenting → analyse → neste fase",small,muted,32,Height-76);
-                using(var track=new SolidBrush(Color.FromArgb(40,49,54)))g.FillRectangle(track,32,Height-48,Width-64,5);
-                g.FillRectangle(green,32,Height-48,(float)((Width-64)*(index+(tracker==null?0:tracker.Fraction))/60),5);
+                PaintText.Draw(g,"Datainnhenting → analyse → neste fase",small,muted,32,Height-90);
+                ProgressStrip.DrawBar(g,new RectangleF(32,Height-65,Width-64,32),(index+(tracker==null?0:tracker.Fraction))/60.0,index+" / 60");
                 PaintText.Draw(g,"Esc avslutter  ·  Alt+Tab setter på pause",small,muted,32,Height-28);
+                if(phase=="ready"||phase=="intro-out")DrawIntro(g);
+            }
+        }
+        void DrawIntro(Graphics g){
+            double now=clock.Elapsed.TotalMilliseconds;
+            float a=(float)Analysis.Clamp(phase=="intro-out"?1-(now-introExit)/320:(now-introShown)/650,0,1);a=a*a*(3-2*a);
+            float w=Math.Min(1000,ClientSize.Width-80),left=(ClientSize.Width-w)/2,top=ClientSize.Height/2f-210;
+            using(var shade=new SolidBrush(Color.FromArgb((int)(a*250),17,21,24)))g.FillRectangle(shade,left-20,top-30,w+40,440);
+            using(var heading=new Font("Segoe UI",36,FontStyle.Bold,GraphicsUnit.Pixel))using(var text=new Font("Segoe UI",24,GraphicsUnit.Pixel))
+            using(var ink=new SolidBrush(Color.FromArgb((int)(255*a),237,244,242)))using(var accent=new SolidBrush(Color.FromArgb((int)(255*a),109,218,182)))
+            using(var sf=new StringFormat{Alignment=StringAlignment.Center}){
+                g.DrawString(DriverSetup.Text("Finn din naturlige bevegelse","Discover your natural movement"),heading,ink,new RectangleF(left,top,w,65),sf);
+                g.DrawString(DriverSetup.Text("Gjør 30 runder med klokken, deretter 30 mot klokken.\nPilen viser retningen. Vi tar en pause når retningen byttes.","Make 30 clockwise turns, then 30 counterclockwise.\nFollow the arrow. There is a pause when direction changes."),text,ink,new RectangleF(left,top+90,w,95),sf);
+                g.DrawString(DriverSetup.Text("Ikke prøv å tegne perfekte sirkler eller rette opp formen.\nBeveg deg naturlig. Alle forsøk teller.","Do not try to draw perfect circles or correct their shape.\nMove naturally. Every attempt counts."),text,ink,new RectangleF(left,top+195,w,80),sf);
+                g.DrawString(DriverSetup.Text("Sentrer musen på underlaget og finn en behagelig håndstilling.","Center your mouse on the pad and find a comfortable hand position."),text,ink,new RectangleF(left,top+285,w,65),sf);
+                g.DrawString(DriverSetup.Text("Klikk når du er klar","Click when you are ready"),text,accent,new RectangleF(left,top+365,w,40),sf);
             }
         }
         internal static void DrawDirectionArrow(Graphics g,float cx,float cy,bool clockwise){
@@ -84,6 +100,7 @@ namespace VectorFit {
         }
         protected override void Dispose(bool disposing){if(disposing){timer.Stop();ReleaseInput();timer.Dispose();title.Dispose();body.Dispose();small.Dispose();}base.Dispose(disposing);}
 #if DEVELOPMENT
+        public void PreviewIntro(){WindowState=FormWindowState.Normal;Size=new Size(1000,740);phase="ready";introShown=-1000;}
         public void Preview(){WindowState=FormWindowState.Normal;Size=new Size(1280,800);index=3;x=0;y=plan[index].Radius;phase="drawing";}
         public void PreviewTransition(bool clockwise){Preview();index=clockwise?0:30;plan[index].Clockwise=clockwise;x=plan[index].Radius;y=0;transition=clockwise?"Gjør deg klar":"Bytter dreieretning";phase="countdown";deadline=clock.Elapsed.TotalMilliseconds+2500;}
 #endif

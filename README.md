@@ -4,9 +4,9 @@
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.19.1-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.1/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.19.2-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.2/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.1/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.19.1) · [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.2/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.19.2) · [Roadmap](ROADMAP.md)
 
 Extract the entire ZIP, open the **TrueTrack** folder and run **TrueTrack.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
@@ -17,6 +17,14 @@ Measure your flicks and precision, compare sensitivity profiles, and check wheth
 Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimental—not yet a full Aimlabs replacement. Testers and contributors are welcome.
 
 The app supports English (first-launch default) and Norwegian; saved language choices are retained. Calibration and local comparisons do not require installing an input driver. Global profiles use optional drivers with separate setup and compatibility considerations.
+
+## Welcome and crosshair selection
+
+The welcome screen previews your crosshair and offers optional customization before you begin. New preferences default to a larger cyan cross with a dark outline and open centre; saved choices are retained.
+
+![Welcome screen with optional crosshair selection](docs/screenshots/welcome.png)
+
+Circle calibration begins with large centred instructions that fade in and wait for your click. They explain 30 clockwise and 30 counterclockwise turns, natural movement and the direction-change pause. Recording starts after the fade-out and countdown. Progress bars are 32–34 pixels tall and show completed counts and percentage. Flick bullseyes are red; precision targets remain green.
 
 ## Calibration and practice views
 

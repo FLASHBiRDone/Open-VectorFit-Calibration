@@ -5,14 +5,17 @@ using System.Windows.Forms;
 using Newtonsoft.Json;
 namespace VectorFit {
  public class Sight {
-  public int Style=0,Size=7,Gap=2,Thickness=2,ColorIndex=0;
+  public int Style=0,Size=12,Gap=4,Thickness=3,ColorIndex=1;
+  public bool Outline;
+  public static string DefaultJson(){return JsonConvert.SerializeObject(new Sight{Outline=true});}
   public static readonly Color[] Colors={Color.White,Color.Cyan,Color.Lime,Color.Magenta,Color.Yellow,Color.Red};
-  public static Sight Parse(string json){try{return String.IsNullOrEmpty(json)?new Sight():JsonConvert.DeserializeObject<Sight>(json)??new Sight();}catch{return new Sight();}}
-  public static string Preference(){try{return File.ReadAllText(Path.Combine(Driver.Data,"crosshair.json"));}catch{return null;}}
+  public static Sight Parse(string json){try{return String.IsNullOrEmpty(json)?new Sight{Outline=true}:JsonConvert.DeserializeObject<Sight>(json)??new Sight();}catch{return new Sight();}}
+  public static string Preference(){try{return File.ReadAllText(Path.Combine(Driver.Data,"crosshair.json"));}catch{return DefaultJson();}}
   public static void Draw(Graphics g,float x,float y,string json){
    if(String.IsNullOrEmpty(json)){using(var p=new Pen(Color.White,1.5f)){g.DrawLine(p,x-7,y,x-2,y);g.DrawLine(p,x+2,y,x+7,y);g.DrawLine(p,x,y-7,x,y-2);g.DrawLine(p,x,y+2,x,y+7);}return;}
    var s=Parse(json);float r=(float)Analysis.Clamp(s.Size,3,32),gap=(float)Analysis.Clamp(s.Gap,0,r-1),th=(float)Analysis.Clamp(s.Thickness,1,6);int style=(int)Analysis.Clamp(s.Style,0,5);Color c=Colors[(int)Analysis.Clamp(s.ColorIndex,0,Colors.Length-1)];
-   using(var p=new Pen(c,th))using(var b=new SolidBrush(c)){
+   for(int pass=s.Outline?0:1;pass<2;pass++)
+   using(var p=new Pen(pass==0?Color.FromArgb(12,18,21):c,pass==0?th+2:th))using(var b=new SolidBrush(pass==0?Color.FromArgb(12,18,21):c)){
     if(style==2||style==3||style==4||style==5)g.DrawEllipse(p,x-r,y-r,2*r,2*r);
     if(style==0||style==4){g.DrawLine(p,x-r,y,x-gap,y);g.DrawLine(p,x+gap,y,x+r,y);g.DrawLine(p,x,y-r,x,y-gap);g.DrawLine(p,x,y+gap,x,y+r);}
     if(style==5){float inner=r*.7f;g.DrawLine(p,x-r-3,y,x-inner,y);g.DrawLine(p,x+inner,y,x+r+3,y);g.DrawLine(p,x,y-r-3,x,y-inner);g.DrawLine(p,x,y+inner,x,y+r+3);}
