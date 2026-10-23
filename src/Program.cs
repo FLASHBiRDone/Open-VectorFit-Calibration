@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -20,6 +20,9 @@ namespace VectorFit {
                 if(Array.IndexOf(args,"en")>=0)L.English=true;
                 if(args.Length>2&&args[0]=="--render-map") {var session=Session.FromJson(File.ReadAllText(args[2]));using(var map=new DirectionMap(session)){map.Width=950;using(var bmp=new Bitmap(map.Width,map.Height)){map.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;}
 
+                if(args.Length>1&&args[0]=="--render-crosshair"){
+                    using(var f=new SightEditor()){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                }
                 if(args.Length>1&&args[0]=="--render-game-setup"){
                     using(var f=new GameSetupForm(new Setup(),delegate{})){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
@@ -43,7 +46,7 @@ namespace VectorFit {
                     using(var f=new ReplayForm(Session.FromJson(File.ReadAllText(args[2])))){f.Preview();f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-aim") {
-                    using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                    using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{DottedCalibration=true,WideFlick=true,Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render") {
                     using(var f=new MainForm()){

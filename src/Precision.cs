@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,6 +8,19 @@ namespace VectorFit {
         public AimClick(double t,double x,double y,bool hit):base(t,x,y){Hit=hit;}
     }
     public static class PrecisionCheck {
+        // Descriptive post-exercise filtering only; decision guards retain every trial.
+        public static List<Trial> FilteredHits(IEnumerable<Trial> source){
+            var hits=source.Where(t=>t.Hit==true&&Finite(t.TotalMs)&&t.TotalMs>0).ToList();
+            if(hits.Count<8)return hits;
+            double limit=2*Analysis.Median(hits.Select(t=>t.TotalMs));
+            return hits.Where(t=>t.TotalMs<=limit).ToList();
+        }
+        public static string InterruptionSummary(IEnumerable<Trial> source){
+            var ts=source.ToList();var hits=ts.Where(t=>t.Hit==true&&Finite(t.TotalMs)&&t.TotalMs>0).ToList();
+            if(hits.Count<8)return DriverSetup.Text("Minst 8 treff kreves for filtrert tid.","At least 8 hits are required for filtered timing.");
+            var kept=FilteredHits(ts);double median=Analysis.Median(hits.Select(t=>t.TotalMs));
+            return DriverSetup.Text("Filtrert tid til treff: ","Filtered successful-hit time: ")+Analysis.Median(kept.Select(t=>t.TotalMs)).ToString("F0")+" ms · "+(hits.Count-kept.Count)+DriverSetup.Text(" treff utelatt (> "," hits excluded (> ")+(2*median).ToString("F0")+" ms). "+DriverSetup.Text("Mulig avbrytelse, ikke bekreftet. Alle forsøk beholdes i profilvurderingen.","Possible interruption, not confirmed. Profile decisions retain all trials.");
+        }
         public const int MeasurementCount=16, ComparisonCount=32;
         public const double TimeLimit=3000;
         public static double Time(Trial t){return t.Hit==true?Math.Min(TimeLimit,t.TotalMs):TimeLimit;}

@@ -184,3 +184,21 @@ Update checks query this project's GitHub Releases. Startup checks are opt-in; m
 ## Guided interface
 
 The interface separates setup, baseline collection, proposal review, comparison and confirmation. The next action is placed above the results. Proposed settings are never displayed as measured after-results before an A/B measurement exists. An incomplete comparison offers another A/B test; completed comparisons offer confirmation, or global-profile selection when validated. Global activation remains explicit. Diagnostic graphs, alternative next-round actions and legacy circle reanalysis remain available in expandable sections. These layout changes do not alter fitting or validation thresholds.
+
+## Expanded flick target geometry
+
+New baselines store Setup.WideFlick=true. Their flick bullseye has a nominal radius of 0.35 degrees (minimum 3 screen pixels), and the scoring area extends to 20 bullseye radii. Bullseye hits score 100; outside the bullseye, scores decrease from 99 to 1 at the outer boundary. Outside scores zero. Rendering and scoring use the same projected radii. Precision targets are unchanged. Older sessions omit this flag and retain their original geometry when continued or confirmed; history comparisons require matching geometry. Starting a new baseline enables the expanded target. Scores across these geometries are not evidence of improvement.
+
+## Possible interruption summary
+
+After a completed precision block, a separate descriptive timing summary excludes successful hits strictly above twice the median successful-hit time, calculated once from that block. At least eight positive finite successful-hit times are required. A/B profiles are summarized separately. The display reports the excluded count and threshold. Raw trials are never deleted; misses, timeouts, matched comparisons, hit rates and all profile acceptance guards retain every attempt. The threshold flags possible distractions, not verified interruptions, and does not establish performance improvement.
+
+Polling rate, actual frame presentation rate and monitor refresh rate are not currently measured or included in comparison equivalence. Raw Input events are timestamped when handled using a monotonic stopwatch; an 8 ms UI timer is not proof of 125 FPS or display synchronization. Consequently hardware/input/rendering changes can confound cross-session comparisons.
+
+## Calibration background
+
+New baselines store Setup.DottedCalibration=true and use a low-contrast projected dot field instead of the room or grid. Identical small dots provide camera-motion feedback without explicit walls, a floor, horizon or grid lines. Camera angles and the movement curve state reset before each target, as before; timing begins only when the target becomes active. The dot pattern is deterministic and identical for A/B conditions. Existing sessions retain their recorded background, and comparable history requires the same background flag. Free practice continues to use the 3D room. These are visual presentation choices, not established improvements in measurement validity.
+
+## Crosshair configuration
+
+Customize crosshair offers cross, dot, ring, ring with dot, ring with cross, and ring with ticks and dot; six colors, size, gap and thickness have a live preview. Preferences are stored locally in profiles/crosshair.json. New baselines snapshot the selection in Setup.Crosshair; continuation and confirmation preserve it, and history equivalence includes it. Practice snapshots the current preference when starting. Legacy measurements without this field retain the original crosshair. This only draws inside TrueTrack; no desktop/game overlay is installed or activated.

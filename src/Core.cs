@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -11,6 +11,9 @@ namespace VectorFit {
         public double Dpi = 1600, Cm360 = 40, Hfov = 103;
         public string Device = "";
         [JsonProperty(DefaultValueHandling=DefaultValueHandling.Ignore)] public bool Arena;
+        [JsonProperty(DefaultValueHandling=DefaultValueHandling.Ignore)] public bool WideFlick;
+        [JsonProperty(DefaultValueHandling=DefaultValueHandling.Ignore)] public bool DottedCalibration;
+        [JsonProperty(DefaultValueHandling=DefaultValueHandling.Ignore)] public string Crosshair;
         [JsonIgnore] public double DegreesPerCount { get { return 360.0 * 2.54 / (Dpi * Cm360); } }
         public bool Valid() { return Dpi>=100 && Dpi<=50000 && Cm360>=3 && Cm360<=200 && Hfov>=60 && Hfov<=140; }
     }
@@ -117,7 +120,7 @@ namespace VectorFit {
         public Session NextRound(string parentMeasurement,bool useCandidate=true) {
             if(!CanTryRawAccel)throw new Exception("Beregn en standardprofil før du starter neste runde.");
             return new Session{SmallGainProtocol=true,InitialBaseline=ResultStory.Initial(this),ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
-                Setup=new Setup{Mouse=Setup.Mouse,Dpi=Setup.Dpi,Cm360=Setup.Cm360,Hfov=Setup.Hfov,Device=Setup.Device,Arena=Setup.Arena}};
+                Setup=new Setup{Mouse=Setup.Mouse,Dpi=Setup.Dpi,Cm360=Setup.Cm360,Hfov=Setup.Hfov,Device=Setup.Device,Arena=Setup.Arena,WideFlick=Setup.WideFlick,DottedCalibration=Setup.DottedCalibration,Crosshair=Setup.Crosshair}};
         }
         public Session Confirmation(string source){
             if(!FitReady||!Correction.Safe())throw new Exception("Beregn et forslag før bekreftelsesrunden.");

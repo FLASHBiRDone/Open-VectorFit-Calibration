@@ -38,7 +38,7 @@ namespace VectorFit {
   bool captured,running,ready=true,paused;IntPtr device;double x,y,last,targetStart,nextOnset;int active;PointD target=new PointD(14,0);
   double Radius {get{return Result.Mode=="tracking"?1.5:Result.Mode=="precision"?.45:1;}}
   public PracticeForm(Setup setup,string mode,int seconds,string input){
-   Result=new PracticeResult{Setup=JObject.FromObject(setup).ToObject<Setup>(),Mode=mode,Seconds=seconds,Input=input};Result.Setup.Arena=true;
+   Result=new PracticeResult{Setup=JObject.FromObject(setup).ToObject<Setup>(),Mode=mode,Seconds=seconds,Input=input};Result.Setup.Arena=true;Result.Setup.Crosshair=Sight.Preference();
    DoubleBuffered=true;AutoScaleMode=AutoScaleMode.None;KeyPreview=true;FormBorderStyle=FormBorderStyle.None;WindowState=FormWindowState.Maximized;BackColor=Color.FromArgb(19,24,27);
    timer.Interval=8;timer.Tick+=delegate{Step();};
    Shown+=delegate{CaptureInput();timer.Start();};Deactivate+=delegate{if(captured){clock.Stop();running=false;paused=true;Release();Invalidate();}};
@@ -71,7 +71,7 @@ namespace VectorFit {
    float f=(float)(ClientSize.Width/(2*Math.Tan(Result.Setup.Hfov*Math.PI/360))),r=f*(float)Math.Tan(Radius*Math.PI/180);
    if(Result.Mode=="switch")for(int i=0;i<4;i++){var p=Project(Practice.Spots[i]);using(var pen=new Pen(Color.FromArgb(90,120,123),2))g.DrawEllipse(pen,p.X-r,p.Y-r,r*2,r*2);}
    if(clock.Elapsed.TotalMilliseconds>=nextOnset){var p=Project(target);using(var b=new SolidBrush(Color.FromArgb(109,218,182)))g.FillEllipse(b,p.X-r,p.Y-r,r*2,r*2);}
-   int cx=ClientSize.Width/2,cy=ClientSize.Height/2;g.DrawLine(Pens.White,cx-6,cy,cx+6,cy);g.DrawLine(Pens.White,cx,cy-6,cx,cy+6);
+   int cx=ClientSize.Width/2,cy=ClientSize.Height/2;Sight.Draw(g,cx,cy,Result.Setup.Crosshair);
    using(var b=new SolidBrush(Color.FromArgb(19,24,27))){g.FillRectangle(b,0,0,ClientSize.Width,90);g.FillRectangle(b,0,ClientSize.Height-80,ClientSize.Width,80);}
    g.DrawString("TRUETRACK / "+Practice.Name(Result.Mode),heading,Brushes.White,28,16);
    g.DrawString(Practice.Text("Fri trening · endrer ingen profil","Free practice · no profile changes"),body,Brushes.LightGray,28,51);

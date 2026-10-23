@@ -4,9 +4,9 @@
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.19.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.0/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.19.1-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.1/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.19.0) · [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.19.1/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.19.1) · [Roadmap](ROADMAP.md)
 
 Extract the entire ZIP, open the **TrueTrack** folder and run **TrueTrack.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
@@ -18,9 +18,15 @@ Our long-term goal is a free, open-source aim-training platform shaped by its co
 
 The app supports English (first-launch default) and Norwegian; saved language choices are retained. Calibration and local comparisons do not require installing an input driver. Global profiles use optional drivers with separate setup and compatibility considerations.
 
-## Optional 3D arena
+## Calibration and practice views
 
-Select **3D arena (optional)** before starting a new baseline. The stationary room follows your mouse-driven camera, with a central crosshair, mint scoring targets and a clear task/progress display. Both A/B profiles use the same environment. Arena measurements stay separate from classic-view history; subsequent and confirmation rounds preserve the selected view.
+New calibration baselines use a subtle moving dot background without room landmarks. Camera and aim reset between targets. Free practice retains the 3D room. Existing sessions preserve their original background and target geometry for fair comparisons.
+
+Choose **Customize crosshair** under Calibrate for six shapes, six colors, size, thickness and centre gap. The selection applies to new baselines and free practice; ongoing comparisons retain their saved crosshair. This is an in-app feature, not a global game overlay.
+
+Flick targets now have a wider scoring area and a smaller 100-point bullseye, with 99–1 points outside the bullseye and zero outside the target. Start a new baseline to use them. Progress bars are thicker and calibration instructions fade in and out before measurement starts.
+
+Completed precision blocks also show a separate filtered timing summary for possible distractions: successful hits above twice their median are excluded from that summary only. At least eight hits are required. Raw data, misses, timeouts and all profile acceptance checks remain unchanged.
 
 ## See how it works
 
@@ -34,9 +40,9 @@ DPI, physical sensitivity (cm/360) and field of view are optional setup steps. D
 
 ### 2. Measure flicks
 
-Click once per target. Misses count, and the scoring rings distinguish a near miss from a distant one. The optional arena adds visual depth while retaining the same comparison rules.
+Click once per target. Misses count, and the scoring rings distinguish a near miss from a distant one. The moving dot field provides camera-motion feedback without a room.
 
-![Flick task in the optional 3D arena with scoring rings](docs/screenshots/flick-arena.png)
+![Flick task with a moving dot background and expanded scoring rings](docs/screenshots/flick-arena.png)
 
 ### 3. Measure precise hits
 

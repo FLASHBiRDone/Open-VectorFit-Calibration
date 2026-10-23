@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -23,6 +23,7 @@ namespace VectorFit {
         readonly Random random=new Random();readonly Stopwatch clock=Stopwatch.StartNew();
         readonly Timer timer=new Timer();List<Motion> motion=new List<Motion>();
         string phase="ready",feedback="Klikk for å starte";double deadline,t0,cameraX,cameraY;
+        double introShown,introExit;
         IntPtr selected=IntPtr.Zero;bool captured;int finished,goal;
         Font title=new Font("Segoe UI",28,FontStyle.Bold,GraphicsUnit.Pixel),body=new Font("Segoe UI",16,FontStyle.Regular,GraphicsUnit.Pixel),small=new Font("Segoe UI",13,FontStyle.Regular,GraphicsUnit.Pixel);
         public int CalibrationGoal {get{return calibrationGoal;}}
@@ -42,7 +43,7 @@ namespace VectorFit {
             AutoScaleMode=AutoScaleMode.None;WindowState=FormWindowState.Maximized;FormBorderStyle=FormBorderStyle.None;
             PrepareTargets(ab);
             timer.Interval=8;timer.Tick+=Tick;
-            Shown+=delegate {CaptureInput();timer.Start();if(autoBegin)BeginNext();};
+            Shown+=delegate {introShown=clock.Elapsed.TotalMilliseconds;CaptureInput();timer.Start();if(autoBegin)BeginNext();};
             Deactivate+=delegate {if(captured)Pause();};
             KeyDown+=delegate(object sender,KeyEventArgs e) {
                 if(e.KeyCode==Keys.Escape){Close();e.Handled=true;}
@@ -110,6 +111,7 @@ namespace VectorFit {
         }
         void Pause() {ReleaseInput();if(current!=null&&phase=="flick"&&dualTask)Finish(false,false);else if(current!=null&&phase!="ready"){queue.Enqueue(current);current=null;}phase="paused";feedback="Pause. Trykk mellomrom for å fortsette.";Invalidate();}
         void Tick(object sender,EventArgs args) {
+            if(phase=="intro-out"&&clock.Elapsed.TotalMilliseconds-introExit>=280){introPending=false;BeginNext();}
             if(phase=="countdown"&&clock.Elapsed.TotalMilliseconds>=deadline) {
                 cameraX=cameraY=0;t0=clock.Elapsed.TotalMilliseconds;motion=new List<Motion>{new Motion(0,0,0)};clicks=new List<AimClick>();phase="flick";
             }
@@ -147,7 +149,7 @@ namespace VectorFit {
             var bent=curve.Transform(original.X,original.Y,time);
             return correction.Transform(bent.X,bent.Y);
         }
-        void ShowIntro(){phase="ready";introPending=true;Invalidate();}
+        void ShowIntro(){introShown=clock.Elapsed.TotalMilliseconds;phase="ready";introPending=true;Invalidate();}
         void StartPrecision(bool comparing){
             flickFinished=finished;if(comparing)flickComparisonGoal=goal;
             precision=true;Completed=false;queue.Clear();finished=0;goal=comparing?PrecisionCheck.ComparisonCount:PrecisionCheck.MeasurementCount;
@@ -177,7 +179,7 @@ namespace VectorFit {
         }
         void ClickRaw() {
             clickPulse=clock.Elapsed.TotalMilliseconds;
-            if(phase=="ready"){introPending=false;BeginNext();}
+            if(phase=="ready"){if(dualTask){introExit=clock.Elapsed.TotalMilliseconds;phase="intro-out";}else{introPending=false;BeginNext();}}
             else if(phase=="flick"){
                 double elapsed=clock.Elapsed.TotalMilliseconds-t0;
                 if(elapsed>=PrecisionCheck.TimeLimit){Finish(false);return;}
@@ -199,7 +201,7 @@ namespace VectorFit {
                 if(tr.Hit==true){hitPulse=clock.Elapsed.TotalMilliseconds;hitPosition=point;}
             }
 
-            if(rings&&!precision)tr.FlickScore=clicked?(largeTargets?FlickScoring.Score100(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180)):FlickScoring.Score(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180))):0;
+            if(rings&&!precision)tr.FlickScore=clicked?(largeTargets?ScoreFlick(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180)):FlickScoring.Score(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180))):0;
             if(precision){
                 if(!clicked)tr.TotalMs=PrecisionCheck.TimeLimit;
                 (validation?PrecisionValidationResults:PrecisionResults).Add(tr);finished++;
@@ -214,7 +216,8 @@ namespace VectorFit {
             }
             bool practiceEnded=dualTask&&current.Warmup&&warmupFinished==8;current=null;if(!advance)return;if(practiceEnded){ShowIntro();return;}BeginNext();
         }
-        float TargetRadius {get {return (float)Math.Max(5,ClientSize.Width/(2*Math.Tan(setup.Hfov*Math.PI/360))*Math.Tan((precision?.35:largeTargets?.8:.65)*Math.PI/180));}}
+        int ScoreFlick(double radii){return setup.WideFlick?FlickScoring.WideScore(radii):FlickScoring.Score100(radii);}
+        float TargetRadius {get {return (float)Math.Max(!precision&&largeTargets&&setup.WideFlick?3:5,ClientSize.Width/(2*Math.Tan(setup.Hfov*Math.PI/360))*Math.Tan((precision?.35:largeTargets?(setup.WideFlick?.35:.8):.65)*Math.PI/180));}}
         bool HitsTarget(PointF p) {double dx=p.X-ClientSize.Width/2,dy=p.Y-ClientSize.Height/2;return dx*dx+dy*dy<=TargetRadius*TargetRadius;}
         public CalibrationProgress Progress {get {
             bool integrated=automaticSession!=null;
@@ -241,29 +244,45 @@ namespace VectorFit {
         }
         string PartTitle {get{return precision?"DEL 2 · PRESISJON":!validation&&warmupFinished<8?"ØVELSE · FLICK":"DEL 1 · FLICK";}}
         void DrawInstructions(Graphics g){
-            float width=Math.Min(900,ClientSize.Width-80),left=(ClientSize.Width-width)/2f,top=ClientSize.Height/2f-170;
-            using(var bg=new SolidBrush(BackColor))g.FillRectangle(bg,left-20,top-20,width+40,395);
+            float width=Math.Min(1000,ClientSize.Width-80),left=(ClientSize.Width-width)/2f,top=ClientSize.Height/2f-225;
+            using(var instructionFont=new Font("Segoe UI",24,FontStyle.Regular,GraphicsUnit.Pixel))
+            using(var detailFont=new Font("Segoe UI",18,FontStyle.Regular,GraphicsUnit.Pixel))
+            using(var headingFont=new Font("Segoe UI",36,FontStyle.Bold,GraphicsUnit.Pixel)){
+            using(var bg=new SolidBrush(BackColor))g.FillRectangle(bg,left-20,top-20,width+40,445);
             using(var sf=new StringFormat{Alignment=StringAlignment.Center}){
                 Action<string,Font,Brush,float,float> line=(text,font,brush,y,h)=>g.DrawString(L.T(text),font,brush,new RectangleF(left,y,width,h),sf);
-                line(confirmation?"BEKREFTELSE · SAMME A OG B":"FASE "+round+(validation?" · A/B-KONTROLL":baselineOnly?" · BASELINE":" · MÅLING MED FASEPROFIL"),body,Brushes.White,top,40);
-                line(PartTitle,title,Brushes.White,top+46,55);
-                line(precision?"Treff den grønne prikken så raskt du klarer med kontroll.":"Sikt raskt mot den grønne prikken og klikk én gang.",body,Brushes.White,top+112,52);
-                line(precision?"Ved bom: korriger og klikk igjen på samme mål. Klokken fortsetter.":"Første klikk går videre, også ved bom. Ikke vent for å finjustere.",body,Brushes.White,top+164,54);
-                line("Maks 3 sekunder per mål. Både tid og treff teller.",small,Brushes.White,top+224,30);
-                line(DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger. Finn en behagelig håndstilling.","Center your mouse on the pad, with room in every direction. Find a comfortable hand position."),small,Brushes.White,top+260,48);
-                if(setup.Arena){using(var accent=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(accent,left+width/2-165,top+316,330,42);line("Klikk for å starte denne delen",body,Brushes.Black,top+325,30);}
-                else line("Klikk for å starte denne delen",body,Brushes.White,top+320,38);
+                line(confirmation?"BEKREFTELSE · SAMME A OG B":"FASE "+round+(validation?" · A/B-KONTROLL":baselineOnly?" · BASELINE":" · MÅLING MED FASEPROFIL"),instructionFont,Brushes.White,top,40);
+                line(PartTitle,headingFont,Brushes.White,top+46,55);
+                line(precision?"Treff den grønne prikken så raskt du klarer med kontroll.":"Sikt raskt mot den grønne prikken og klikk én gang.",instructionFont,Brushes.White,top+112,52);
+                line(precision?"Ved bom: korriger og klikk igjen på samme mål. Klokken fortsetter.":"Første klikk går videre, også ved bom. Ikke vent for å finjustere.",instructionFont,Brushes.White,top+172,68);
+                line("Maks 3 sekunder per mål. Både tid og treff teller.",detailFont,Brushes.White,top+250,40);
+                line(DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger. Finn en behagelig håndstilling.","Center your mouse on the pad, with room in every direction. Find a comfortable hand position."),detailFont,Brushes.White,top+294,58);
+                if(setup.Arena){using(var accent=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(accent,left+width/2-165,top+366,330,48);line("Klikk for å starte denne delen",instructionFont,Brushes.Black,top+374,38);}
+                else line("Klikk for å starte denne delen",instructionFont,Brushes.White,top+374,38);
+            }
+        }
+        }
+        void DrawFadingInstructions(Graphics g){
+            double now=clock.Elapsed.TotalMilliseconds;
+            float opacity=(float)Analysis.Clamp(phase=="intro-out"?1-(now-introExit)/280:(now-introShown)/360,0,1);
+            opacity=opacity*opacity*(3-2*opacity);
+            using(var layer=new Bitmap(ClientSize.Width,ClientSize.Height))
+            using(var canvas=Graphics.FromImage(layer))
+            using(var attributes=new System.Drawing.Imaging.ImageAttributes()){
+                canvas.SmoothingMode=SmoothingMode.AntiAlias;DrawInstructions(canvas);
+                var matrix=new System.Drawing.Imaging.ColorMatrix();matrix.Matrix33=opacity;attributes.SetColorMatrix(matrix);
+                g.DrawImage(layer,ClientRectangle,0,0,layer.Width,layer.Height,GraphicsUnit.Pixel,attributes);
             }
         }
 #if DEVELOPMENT
-        public void PreviewInstructions(bool precise){WindowState=FormWindowState.Normal;Size=new Size(1280,800);dualTask=true;round=2;warmupFinished=8;precision=precise;phase="ready";}
+        public void PreviewInstructions(bool precise){WindowState=FormWindowState.Normal;Size=new Size(1280,800);dualTask=true;round=2;warmupFinished=8;precision=precise;phase="ready";introShown=-1000;}
 #endif
         void DrawArenaHud(Graphics g){
             int w=ClientSize.Width,h=ClientSize.Height;
             using(var background=new SolidBrush(Color.FromArgb(235,19,24,27))) {g.FillRectangle(background,0,0,w,92);g.FillRectangle(background,0,h-94,w,94);}
             using(var muted=new SolidBrush(Color.FromArgb(169,184,188)))using(var mint=new SolidBrush(Color.FromArgb(109,218,182)))using(var heading=new Font("Segoe UI",20,FontStyle.Bold,GraphicsUnit.Pixel)) {
                 g.DrawString("TRUETRACK",heading,Brushes.White,30,18);
-                g.DrawString(DriverSetup.Text("TRENINGSSAL / 01","TRAINING ROOM / 01"),small,muted,30,51);
+                g.DrawString(setup.DottedCalibration?DriverSetup.Text("KALIBRERING","CALIBRATION"):DriverSetup.Text("TRENINGSSAL / 01","TRAINING ROOM / 01"),small,muted,30,51);
                 string task=precision?DriverSetup.Text("PRESISJON","PRECISION"):"FLICK";
                 using(var center=new StringFormat{Alignment=StringAlignment.Center}){
                     g.DrawString(task,heading,mint,new RectangleF(w/2-170,17,340,30),center);
@@ -278,17 +297,24 @@ namespace VectorFit {
                 g.DrawString(instruction,body,Brushes.White,30,h-83);
                 var progress=Progress;g.DrawString(progress.Label,small,muted,30,h-56);
                 using(var right=new StringFormat{Alignment=StringAlignment.Far})g.DrawString("Esc · "+DriverSetup.Text("Avslutt","Exit")+"   /   Alt+Tab · "+DriverSetup.Text("Pause","Pause"),small,muted,new RectangleF(w-330,h-29,300,22),right);
-                using(var track=new SolidBrush(Color.FromArgb(48,60,63)))g.FillRectangle(track,30,h-34,w-390,3);
-                g.FillRectangle(mint,30,h-34,(float)((w-390)*progress.Fraction),3);
+                using(var track=new SolidBrush(Color.FromArgb(48,60,63)))g.FillRectangle(track,30,h-34,w-390,14);
+                g.FillRectangle(mint,30,h-34,(float)((w-390)*progress.Fraction),14);
             }
+        }
+        static readonly PointD[] calibrationDots=MakeCalibrationDots();
+        static PointD[] MakeCalibrationDots(){var rng=new Random(8147);return Enumerable.Range(0,900).Select(i=>new PointD(rng.NextDouble()*180-90,rng.NextDouble()*120-60)).ToArray();}
+        void DrawCalibrationDots(Graphics g){
+            // Uniform, low-contrast dots: no grid, walls, horizon or unique landmarks.
+            using(var brush=new SolidBrush(Color.FromArgb(51,64,67)))foreach(var dot in calibrationDots){var p=Project(dot.X,dot.Y);if(p.X>=0&&p.X<ClientSize.Width&&p.Y>=0&&p.Y<ClientSize.Height)g.FillEllipse(brush,p.X-1.3f,p.Y-1.3f,2.6f,2.6f);}
         }
         protected override void OnPaint(PaintEventArgs e) {
             base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
-            if(setup.Arena)ArenaScene.Draw(g,ClientSize,setup.Hfov,cameraX,cameraY);
+            if(setup.DottedCalibration)DrawCalibrationDots(g);
+            else if(setup.Arena)ArenaScene.Draw(g,ClientSize,setup.Hfov,cameraX,cameraY);
             else using(var grid=new SolidBrush(Color.FromArgb(40,49,54)))
                 for(int x=-48;x<=48;x+=6)for(int y=-30;y<=30;y+=6){var p=Project(x,y);if(p.X>0&&p.X<Width&&p.Y>0&&p.Y<Height)g.FillEllipse(grid,p.X-1,p.Y-1,2,2);}
             int cx=ClientSize.Width/2,cy=ClientSize.Height/2;
-            using(var pen=new Pen(Color.White,1.5f)){g.DrawLine(pen,cx-7,cy,cx-2,cy);g.DrawLine(pen,cx+2,cy,cx+7,cy);g.DrawLine(pen,cx,cy-7,cx,cy-2);g.DrawLine(pen,cx,cy+2,cx,cy+7);}
+            Sight.Draw(g,cx,cy,setup.Crosshair);
             if(!setup.Arena)using(var muted=new SolidBrush(Color.FromArgb(164,179,185))) {
                 PaintText.Draw(g,"FASE "+round+(validation?" · KONTROLLERER FORSLAGET":baselineOnly?" · BASELINE / DATAINNHENTING":" · DATAINNHENTING MED FASEPROFIL"),small,muted,32,24);
                 PaintText.Draw(g,finished+" / "+goal+(precision?" mål":validation&&sequential?" registrerte forsøk":" registrerte klikk"),body,Brushes.White,32,49);
@@ -299,12 +325,12 @@ namespace VectorFit {
             if(phase=="flick"&&current!=null) {
                 double a=current.Angle;var p=Project(Math.Cos(a)*current.Radius,Math.Sin(a)*current.Radius);
                 float radius=TargetRadius;
-                if(rings&&!precision)for(int ring=5;ring>=2;ring--){float rr=radius*ring;using(var fill=new SolidBrush(Color.FromArgb(32+ring*7,64,114,126)))g.FillEllipse(fill,p.X-rr,p.Y-rr,rr*2,rr*2);using(var line=new Pen(Color.FromArgb(150,153,193,199),1))g.DrawEllipse(line,p.X-rr,p.Y-rr,rr*2,rr*2);}
+                if(rings&&!precision)for(int ring=5;ring>=2;ring--){float rr=radius*(largeTargets&&setup.WideFlick?1+19f*(ring-1)/4: ring);using(var fill=new SolidBrush(Color.FromArgb(32+ring*7,64,114,126)))g.FillEllipse(fill,p.X-rr,p.Y-rr,rr*2,rr*2);using(var line=new Pen(Color.FromArgb(150,153,193,199),1))g.DrawEllipse(line,p.X-rr,p.Y-rr,rr*2,rr*2);}
 
                 using(var brush=new SolidBrush(Color.FromArgb(109,218,182)))g.FillEllipse(brush,p.X-radius,p.Y-radius,2*radius,2*radius);
                 using(var pen=new Pen(Color.FromArgb(160,109,218,182),1))g.DrawEllipse(pen,p.X-radius-5,p.Y-radius-5,2*radius+10,2*radius+10);
             }else {
-                string text=L.T(dualTask&&phase=="ready"?"":phase=="countdown"?"":phase=="ready"?"Klikk når du er klar":feedback);
+                string text=L.T(dualTask&&(phase=="ready"||phase=="intro-out")?"":phase=="countdown"?"":phase=="ready"?"Klikk når du er klar":feedback);
                 SizeF size=g.MeasureString(text,body);PaintText.Draw(g,text,body,Brushes.White,cx-size.Width/2,cy+64);
                 if(phase=="ready"&&!dualTask) {
                     string sub=L.T(finished==0?"Klikk én gang for å starte. Deretter ett klikk per mål, treff eller bom.":feedback);
@@ -313,12 +339,12 @@ namespace VectorFit {
             }
             if(!setup.Arena&&rings&&!precision)PaintText.Draw(g,(largeTargets?DriverSetup.Text("Sentrum 100 · poengområde 1–100 · bom 0","Center 100 · scoring area 1–100 · miss 0"):DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0"))+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+(largeTargets?" / 100":" / 10"):""),small,Brushes.White,32,Height-108);
             if(!setup.Arena&&current!=null&&current.Warmup)PaintText.Draw(g,"Øvelsesrunde: lagres ikke",body,Brushes.White,32,80);
-            if(dualTask){if(phase=="ready")DrawInstructions(g);else if(!setup.Arena)using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
+            if(dualTask){if(phase=="ready"||phase=="intro-out")DrawFadingInstructions(g);else if(!setup.Arena)using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
             DrawEffects(g);
             if(setup.Arena){DrawArenaHud(g);return;}
             var progress=Progress;
-            using(var track=new SolidBrush(Color.FromArgb(40,49,54)))g.FillRectangle(track,32,Height-55,Width-64,5);
-            using(var fill=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(fill,32,Height-55,(float)((Width-64)*progress.Fraction),5);
+            using(var track=new SolidBrush(Color.FromArgb(40,49,54)))g.FillRectangle(track,32,Height-55,Width-64,14);
+            using(var fill=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(fill,32,Height-55,(float)((Width-64)*progress.Fraction),14);
             using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,progress.Label,small,brush,32,Height-82);
         }
     }

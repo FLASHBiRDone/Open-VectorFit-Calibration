@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -66,7 +66,7 @@ namespace VectorFit {
         }
     }
     public static class History {
-        public static bool SameSetup(Session a,Session b){return a.Setup.Mouse==b.Setup.Mouse&&a.Setup.Dpi==b.Setup.Dpi&&a.Setup.Cm360==b.Setup.Cm360&&a.Setup.Hfov==b.Setup.Hfov&&a.Setup.Device==b.Setup.Device&&a.Setup.Arena==b.Setup.Arena;}
+        public static bool SameSetup(Session a,Session b){return a.Setup.Mouse==b.Setup.Mouse&&a.Setup.Dpi==b.Setup.Dpi&&a.Setup.Cm360==b.Setup.Cm360&&a.Setup.Hfov==b.Setup.Hfov&&a.Setup.Device==b.Setup.Device&&a.Setup.Arena==b.Setup.Arena&&a.Setup.WideFlick==b.Setup.WideFlick&&a.Setup.DottedCalibration==b.Setup.DottedCalibration&&a.Setup.Crosshair==b.Setup.Crosshair;}
         public static List<RoundStatistics> Load(Session current,string folder,out string note) {
             note="";var result=new List<RoundStatistics>{new RoundStatistics(current)};var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);var s=current;
             while(!String.IsNullOrEmpty(s.ParentMeasurement)&&result.Count<100) {
@@ -153,6 +153,7 @@ namespace VectorFit {
 
 namespace VectorFit {
     public static class FlickScoring {
+        public static int WideScore(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>20)return 0;if(radii<=1)return 100;return Math.Max(1,99-(int)Math.Floor(98*(radii-1)/19));}
         public static int Score100(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>5)return 0;return Math.Max(1,100-(int)Math.Floor(99*radii/5));}
         public static int Score(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>5)return 0;return 12-2*Math.Max(1,(int)Math.Ceiling(radii));}
         public static double? Average(List<Trial> ts){return ts.Count>0&&ts.All(t=>t.FlickScore.HasValue)?(double?)ts.Average(t=>(double)t.FlickScore.Value):null;}
