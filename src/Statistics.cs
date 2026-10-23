@@ -66,7 +66,7 @@ namespace VectorFit {
         }
     }
     public static class History {
-        public static bool SameSetup(Session a,Session b){return a.Setup.Mouse==b.Setup.Mouse&&a.Setup.Dpi==b.Setup.Dpi&&a.Setup.Cm360==b.Setup.Cm360&&a.Setup.Hfov==b.Setup.Hfov&&a.Setup.Device==b.Setup.Device;}
+        public static bool SameSetup(Session a,Session b){return a.Setup.Mouse==b.Setup.Mouse&&a.Setup.Dpi==b.Setup.Dpi&&a.Setup.Cm360==b.Setup.Cm360&&a.Setup.Hfov==b.Setup.Hfov&&a.Setup.Device==b.Setup.Device&&a.Setup.Arena==b.Setup.Arena;}
         public static List<RoundStatistics> Load(Session current,string folder,out string note) {
             note="";var result=new List<RoundStatistics>{new RoundStatistics(current)};var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);var s=current;
             while(!String.IsNullOrEmpty(s.ParentMeasurement)&&result.Count<100) {
@@ -173,7 +173,7 @@ namespace VectorFit {
             if(initial){var first=ResultStory.Initial(s);fa=first==null?new List<Trial>():first.Flick;pa=first==null?new List<Trial>():first.Precision;
                 fb=s.Baseline;pb=s.PrecisionBaseline;
                 context=T("Fast baseline fra første test → denne rundens måleprofil · trend","Fixed first-test baseline → this round's measured config · trend");comparable=false;
-                if(first!=null&&(first.BalancedTargets!=s.BalancedTargets||first.PrecisionFirst!=s.PrecisionFirst||first.SmallGainProtocol!=s.SmallGainProtocol)){context+=T(" · ulik testprotokoll"," · different test protocol");protocolMismatch=true;}
+                if(first!=null&&(first.BalancedTargets!=s.BalancedTargets||first.PrecisionFirst!=s.PrecisionFirst||first.SmallGainProtocol!=s.SmallGainProtocol||first.Setup==null||first.Setup.Arena!=s.Setup.Arena)){context+=T(" · ulik testprotokoll"," · different test protocol");protocolMismatch=true;}
             }
             AccessibleName=context;
         }

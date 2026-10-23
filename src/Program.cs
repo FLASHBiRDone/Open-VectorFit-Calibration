@@ -37,7 +37,7 @@ namespace VectorFit {
                     using(var f=new CircleForm(new Setup())){if(Array.IndexOf(args,"cw")>=0||Array.IndexOf(args,"ccw")>=0)f.PreviewTransition(Array.IndexOf(args,"cw")>=0);else f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-aim") {
-                    using(var f=new AimForm(new Session{PrecisionFirst=true},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                    using(var f=new AimForm(new Session{PrecisionFirst=true,SmallGainProtocol=true,Setup=new Setup{Arena=Array.IndexOf(args,"arena")>=0}},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();if(Array.IndexOf(args,"turned")>=0)f.PreviewCamera(25,12);if(Array.IndexOf(args,"small")>=0)f.Size=new Size(1000,740);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render") {
                     using(var f=new MainForm()){

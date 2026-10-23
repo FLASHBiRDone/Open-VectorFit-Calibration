@@ -2,6 +2,12 @@
 
 This document describes the algorithm used for new calibration sessions. Thresholds are engineering choices unless explicitly identified as statistical tests. The software measures performance and tests bounded proposals; it does not guarantee better aim or identify a hardware defect.
 
+## Optional arena presentation
+
+Before starting a new baseline, users may select the 3D training room. It is a stationary viewpoint with mouse-driven camera rotation, a central crosshair and an original, low-contrast room. The classic view remains available. Both presentations use the same target projection, angular distances, scoring areas, input transformation and timing rules. The room is visual context, not a separate sensitivity correction or a claim of measured transfer to a game.
+
+The arena choice is stored in the session setup and preserved in subsequent and confirmation rounds. A/B uses the same environment for both profiles, without identifying the active A/B profile in the arena HUD. Comparison fingerprints and history matching distinguish arena from classic measurements. Switching environments requires a new baseline; old sessions retain their original view. Room geometry is clipped at the camera's near plane before drawing. Results remain based on recorded input and click events, not room geometry.
+
 ## Calibration flow
 
 A phase consists of flick mapping followed by 16 precision targets. Flick mapping can extend from 48 to 64 to 80 attempts when fitting needs more evidence. Phase 1 ends with a baseline and a proposal. The user can test that proposal with A/B, explicitly apply it for the next phase, or keep the current profile. Later phases compare their next proposal with the profile used for their measurements.

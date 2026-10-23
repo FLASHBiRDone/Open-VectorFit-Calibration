@@ -233,6 +233,7 @@ namespace VectorFit {
         }
 #if DEVELOPMENT
         public void PreviewRings(){WindowState=FormWindowState.Normal;Size=new Size(1280,800);rings=true;warmupFinished=8;current=new Target{Angle=0,Radius=10};phase="flick";}
+        public void PreviewCamera(double x,double y){cameraX=x;cameraY=y;}
         public void Preview(bool hit){WindowState=FormWindowState.Normal;Size=new Size(1280,800);warmupFinished=8;finished=24;phase="countdown";clickPulse=clock.Elapsed.TotalMilliseconds;if(hit){hitPulse=clickPulse;hitPosition=new PointF(Width/2+3,Height/2+2);}}
 #endif
         PointF Project(double yaw,double pitch) {
@@ -250,19 +251,45 @@ namespace VectorFit {
                 line(precision?"Ved bom: korriger og klikk igjen på samme mål. Klokken fortsetter.":"Første klikk går videre, også ved bom. Ikke vent for å finjustere.",body,Brushes.White,top+164,54);
                 line("Maks 3 sekunder per mål. Både tid og treff teller.",small,Brushes.White,top+224,30);
                 line(DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger. Finn en behagelig håndstilling.","Center your mouse on the pad, with room in every direction. Find a comfortable hand position."),small,Brushes.White,top+260,48);
-                line("Klikk for å starte denne delen",body,Brushes.White,top+320,38);
+                if(setup.Arena){using(var accent=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(accent,left+width/2-165,top+316,330,42);line("Klikk for å starte denne delen",body,Brushes.Black,top+325,30);}
+                else line("Klikk for å starte denne delen",body,Brushes.White,top+320,38);
             }
         }
 #if DEVELOPMENT
         public void PreviewInstructions(bool precise){WindowState=FormWindowState.Normal;Size=new Size(1280,800);dualTask=true;round=2;warmupFinished=8;precision=precise;phase="ready";}
 #endif
+        void DrawArenaHud(Graphics g){
+            int w=ClientSize.Width,h=ClientSize.Height;
+            using(var background=new SolidBrush(Color.FromArgb(235,19,24,27))) {g.FillRectangle(background,0,0,w,92);g.FillRectangle(background,0,h-94,w,94);}
+            using(var muted=new SolidBrush(Color.FromArgb(169,184,188)))using(var mint=new SolidBrush(Color.FromArgb(109,218,182)))using(var heading=new Font("Segoe UI",20,FontStyle.Bold,GraphicsUnit.Pixel)) {
+                g.DrawString("TRUETRACK",heading,Brushes.White,30,18);
+                g.DrawString(DriverSetup.Text("TRENINGSSAL / 01","TRAINING ROOM / 01"),small,muted,30,51);
+                string task=precision?DriverSetup.Text("PRESISJON","PRECISION"):"FLICK";
+                using(var center=new StringFormat{Alignment=StringAlignment.Center}){
+                    g.DrawString(task,heading,mint,new RectangleF(w/2-170,17,340,30),center);
+                    g.DrawString(DriverSetup.Text("Runde ","Round ")+round+"  /  "+(confirmation?DriverSetup.Text("Bekreftelse","Confirmation"):validation?DriverSetup.Text("Sammenligning","Comparison"):baselineOnly?"Baseline":DriverSetup.Text("Kartlegging","Mapping")),small,muted,new RectangleF(w/2-170,50,340,25),center);
+                }
+                using(var right=new StringFormat{Alignment=StringAlignment.Far}){
+                    g.DrawString(finished+" / "+goal,heading,Brushes.White,new RectangleF(w-250,17,220,30),right);
+                    g.DrawString(current!=null&&current.Warmup?DriverSetup.Text("Øvelse · lagres ikke","Warm-up · not saved"):DriverSetup.Text("Registrerte forsøk","Recorded attempts"),small,muted,new RectangleF(w-290,50,260,25),right);
+                }
+                string instruction=precision?DriverSetup.Text("Treff med kontroll. Ved bom fortsetter klokken.","Hit with control. Misses keep the clock running."):DriverSetup.Text("Ett klikk per mål · sentrum 100 · ytterkant 1 · bom 0","One click per target · center 100 · outer edge 1 · miss 0");
+                if(!largeTargets&&!precision)instruction=DriverSetup.Text("Ett klikk per mål · også ved bom","One click per target · including misses");
+                g.DrawString(instruction,body,Brushes.White,30,h-83);
+                var progress=Progress;g.DrawString(progress.Label,small,muted,30,h-56);
+                using(var right=new StringFormat{Alignment=StringAlignment.Far})g.DrawString("Esc · "+DriverSetup.Text("Avslutt","Exit")+"   /   Alt+Tab · "+DriverSetup.Text("Pause","Pause"),small,muted,new RectangleF(w-330,h-29,300,22),right);
+                using(var track=new SolidBrush(Color.FromArgb(48,60,63)))g.FillRectangle(track,30,h-34,w-390,3);
+                g.FillRectangle(mint,30,h-34,(float)((w-390)*progress.Fraction),3);
+            }
+        }
         protected override void OnPaint(PaintEventArgs e) {
             base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
-            using(var grid=new SolidBrush(Color.FromArgb(40,49,54)))
+            if(setup.Arena)ArenaScene.Draw(g,ClientSize,setup.Hfov,cameraX,cameraY);
+            else using(var grid=new SolidBrush(Color.FromArgb(40,49,54)))
                 for(int x=-48;x<=48;x+=6)for(int y=-30;y<=30;y+=6){var p=Project(x,y);if(p.X>0&&p.X<Width&&p.Y>0&&p.Y<Height)g.FillEllipse(grid,p.X-1,p.Y-1,2,2);}
             int cx=ClientSize.Width/2,cy=ClientSize.Height/2;
             using(var pen=new Pen(Color.White,1.5f)){g.DrawLine(pen,cx-7,cy,cx-2,cy);g.DrawLine(pen,cx+2,cy,cx+7,cy);g.DrawLine(pen,cx,cy-7,cx,cy-2);g.DrawLine(pen,cx,cy+2,cx,cy+7);}
-            using(var muted=new SolidBrush(Color.FromArgb(164,179,185))) {
+            if(!setup.Arena)using(var muted=new SolidBrush(Color.FromArgb(164,179,185))) {
                 PaintText.Draw(g,"FASE "+round+(validation?" · KONTROLLERER FORSLAGET":baselineOnly?" · BASELINE / DATAINNHENTING":" · DATAINNHENTING MED FASEPROFIL"),small,muted,32,24);
                 PaintText.Draw(g,finished+" / "+goal+(precision?" mål":validation&&sequential?" registrerte forsøk":" registrerte klikk"),body,Brushes.White,32,49);
                 if(validation&&sequential)PaintText.Draw(g,"A/B vurderes etter 32, 48 og høyst 64 forsøk. Tydelige resultater stopper testen tidligere.",small,muted,32,80);
@@ -284,14 +311,68 @@ namespace VectorFit {
                     var sz=g.MeasureString(sub,small);using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,sub,small,brush,cx-sz.Width/2,cy+98);
                 }
             }
-            if(rings&&!precision)PaintText.Draw(g,(largeTargets?DriverSetup.Text("Sentrum 100 · poengområde 1–100 · bom 0","Center 100 · scoring area 1–100 · miss 0"):DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0"))+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+(largeTargets?" / 100":" / 10"):""),small,Brushes.White,32,Height-55);
-            if(current!=null&&current.Warmup)PaintText.Draw(g,"Øvelsesrunde: lagres ikke",body,Brushes.White,32,80);
-            if(dualTask){if(phase=="ready")DrawInstructions(g);else using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
+            if(!setup.Arena&&rings&&!precision)PaintText.Draw(g,(largeTargets?DriverSetup.Text("Sentrum 100 · poengområde 1–100 · bom 0","Center 100 · scoring area 1–100 · miss 0"):DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0"))+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+(largeTargets?" / 100":" / 10"):""),small,Brushes.White,32,Height-108);
+            if(!setup.Arena&&current!=null&&current.Warmup)PaintText.Draw(g,"Øvelsesrunde: lagres ikke",body,Brushes.White,32,80);
+            if(dualTask){if(phase=="ready")DrawInstructions(g);else if(!setup.Arena)using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
             DrawEffects(g);
+            if(setup.Arena){DrawArenaHud(g);return;}
             var progress=Progress;
             using(var track=new SolidBrush(Color.FromArgb(40,49,54)))g.FillRectangle(track,32,Height-55,Width-64,5);
             using(var fill=new SolidBrush(Color.FromArgb(109,218,182)))g.FillRectangle(fill,32,Height-55,(float)((Width-64)*progress.Fraction),5);
             using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,progress.Label,small,brush,32,Height-82);
+        }
+    }
+}
+namespace VectorFit {
+    // Original room geometry. Positive Y points down, matching AimGeometry.
+    static class ArenaScene {
+        internal struct Vertex {
+            public double X,Y,Z;
+            public Vertex(double x,double y,double z){X=x;Y=y;Z=z;}
+        }
+        internal static Vertex Camera(Vertex v,double yaw,double pitch){
+            double r=System.Math.PI/180,cy=System.Math.Cos(yaw*r),sy=System.Math.Sin(yaw*r),cp=System.Math.Cos(pitch*r),sp=System.Math.Sin(pitch*r);
+            double x=v.X*cy-v.Z*sy,z=v.X*sy+v.Z*cy;
+            return new Vertex(x,v.Y*cp-z*sp,v.Y*sp+z*cp);
+        }
+        internal static System.Collections.Generic.List<Vertex> Clip(System.Collections.Generic.List<Vertex> input){
+            var result=new System.Collections.Generic.List<Vertex>();if(input.Count==0)return result;
+            var a=input[input.Count-1];foreach(var b in input){
+                if((a.Z>=.2)!=(b.Z>=.2)){double t=(.2-a.Z)/(b.Z-a.Z);result.Add(new Vertex(a.X+(b.X-a.X)*t,a.Y+(b.Y-a.Y)*t,.2));}
+                if(b.Z>=.2)result.Add(b);a=b;
+            }return result;
+        }
+        public static void Draw(System.Drawing.Graphics g,System.Drawing.Size size,double fov,double yaw,double pitch){
+            double focal=size.Width/(2*System.Math.Tan(fov*System.Math.PI/360));
+            System.Func<Vertex,System.Drawing.PointF> project=v=>new System.Drawing.PointF((float)(size.Width/2.0+focal*v.X/v.Z),(float)(size.Height/2.0+focal*v.Y/v.Z));
+            System.Action<System.Drawing.Color,Vertex[]> face=(color,vertices)=>{
+                var list=Clip(vertices.Select(v=>Camera(v,yaw,pitch)).ToList());
+                if(list.Count>=3)using(var brush=new System.Drawing.SolidBrush(color))g.FillPolygon(brush,list.Select(project).ToArray());
+            };
+            System.Action<Vertex,Vertex,System.Drawing.Color> line=(a,b,color)=>{
+                a=Camera(a,yaw,pitch);b=Camera(b,yaw,pitch);if(a.Z<.2&&b.Z<.2)return;
+                if(a.Z<.2){double t=(.2-a.Z)/(b.Z-a.Z);a=new Vertex(a.X+(b.X-a.X)*t,a.Y+(b.Y-a.Y)*t,.2);}
+                if(b.Z<.2){double t=(.2-b.Z)/(a.Z-b.Z);b=new Vertex(b.X+(a.X-b.X)*t,b.Y+(a.Y-b.Y)*t,.2);}
+                using(var pen=new System.Drawing.Pen(color,1))g.DrawLine(pen,project(a),project(b));
+            };
+            var floor=System.Drawing.Color.FromArgb(36,42,43);var wall=System.Drawing.Color.FromArgb(32,40,43);
+            g.Clear(System.Drawing.Color.FromArgb(23,29,32));
+            face(wall,new[]{new Vertex(-30,-17,32),new Vertex(30,-17,32),new Vertex(30,14,32),new Vertex(-30,14,32)});
+            face(floor,new[]{new Vertex(-30,14,-32),new Vertex(30,14,-32),new Vertex(30,14,32),new Vertex(-30,14,32)});
+            face(System.Drawing.Color.FromArgb(27,34,37),new[]{new Vertex(-30,-17,-32),new Vertex(-30,-17,32),new Vertex(-30,14,32),new Vertex(-30,14,-32)});
+            face(System.Drawing.Color.FromArgb(29,36,39),new[]{new Vertex(30,-17,32),new Vertex(30,-17,-32),new Vertex(30,14,-32),new Vertex(30,14,32)});
+            face(wall,new[]{new Vertex(30,-17,-32),new Vertex(-30,-17,-32),new Vertex(-30,14,-32),new Vertex(30,14,-32)});
+            var seam=System.Drawing.Color.FromArgb(48,57,59);
+            for(int x=-30;x<=30;x+=6){line(new Vertex(x,14,-32),new Vertex(x,14,32),seam);line(new Vertex(x,-17,32),new Vertex(x,14,32),System.Drawing.Color.FromArgb(38,47,50));}
+            for(int z=-32;z<=32;z+=4)line(new Vertex(-30,14,z),new Vertex(30,14,z),seam);
+            var trim=System.Drawing.Color.FromArgb(70,107,99);
+            line(new Vertex(-30,14,32),new Vertex(30,14,32),trim);
+            line(new Vertex(-30,14,-32),new Vertex(-30,14,32),trim);
+            line(new Vertex(30,14,-32),new Vertex(30,14,32),trim);
+            // Paired wall strips give the room its own architectural rhythm.
+            foreach(int x in new[]{-24,-18,18,24}){
+                face(System.Drawing.Color.FromArgb(61,87,82),new[]{new Vertex(x-.06,-12,31.98),new Vertex(x+.06,-12,31.98),new Vertex(x+.06,9,31.98),new Vertex(x-.06,9,31.98)});
+            }
         }
     }
 }

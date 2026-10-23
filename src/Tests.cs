@@ -31,6 +31,21 @@ namespace VectorFit {
         public static int Run(string path) {
             log=new List<string>();checks=0;
             try{
+                var classic=new Session();var arenaSession=new Session{Setup=new Setup{Arena=true},FitReady=true,Repeatable=true};
+                Check(JObject.FromObject(classic.Setup)["Arena"]==null,"Classic setup omits new flag to retain existing comparison hashes");
+                Check(!History.SameSetup(classic,arenaSession)&&ResultStory.Key(classic)!=ResultStory.Key(arenaSession),"Arena and classic measurements cannot share comparisons or history");
+                Check(JObject.FromObject(arenaSession).ToObject<Session>().Setup.Arena,"Arena setting survives saved measurement round trip");
+                arenaSession.Baseline.Add(new Trial());
+                Check(arenaSession.NextRound("arena.vectorfit.json").Setup.Arena&&arenaSession.Confirmation("arena.vectorfit.json").Setup.Arena,"Next round and confirmation preserve the same arena");
+                var clipped=ArenaScene.Clip(new List<ArenaScene.Vertex>{new ArenaScene.Vertex(-1,0,-1),new ArenaScene.Vertex(1,0,2),new ArenaScene.Vertex(0,1,2)});
+                Check(clipped.Count==4&&clipped.All(v=>v.Z>=.2),"Arena polygons crossing the camera are clipped before projection");
+                var vertex=ArenaScene.Camera(new ArenaScene.Vertex(3,2,8),20,-12);
+                var offset=AimGeometry.Offset(Math.Atan2(3,8)*180/Math.PI,Math.Atan2(2,Math.Sqrt(73))*180/Math.PI,20,-12);
+                Check(Math.Abs(vertex.X/vertex.Z-offset.X)<1e-9&&Math.Abs(vertex.Y/vertex.Z-offset.Y)<1e-9,"Arena camera agrees with target and hit-detection projection");
+                using(var bitmap=new System.Drawing.Bitmap(1000,740))using(var graphics=System.Drawing.Graphics.FromImage(bitmap)){
+                    foreach(double yaw in new[]{0.0,45,90,180,270})foreach(double pitch in new[]{-80.0,0,80})ArenaScene.Draw(graphics,bitmap.Size,103,yaw,pitch);
+                    Check(true,"Arena renders safely when looking around, behind and near the ceiling");
+                }
                 Check(AppUpdates.Newer("v0.19.0")&&!AppUpdates.Newer("v0.18.0")&&!AppUpdates.Newer("invalid"),"Update version comparison rejects equal and invalid versions");
                 Check(!OutcomeTimeline.Rate(new Trial[0]).HasValue,"Empty hit percentage is unknown");
                 Check(OutcomeTimeline.Rate(new[]{new Trial{Hit=true},new Trial{Hit=false}})==50,"Hit percentage includes misses");

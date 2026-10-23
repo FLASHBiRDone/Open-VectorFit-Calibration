@@ -13,7 +13,7 @@ namespace VectorFit {
     class MainForm:Form {
         Color bg=Color.FromArgb(19,24,27),panel=Color.FromArgb(28,34,38),ink=Color.FromArgb(237,244,242),muted=Color.FromArgb(169,184,188),accent=Color.FromArgb(109,218,182);
         Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{SmallGainProtocol=true,ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
-        TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
+        CheckBox arena;TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
         public MainForm() {
             Text="TrueTrack | Kalibrering og global profil";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
             StartPosition=FormStartPosition.CenterScreen;BackColor=bg;ForeColor=ink;Font=new Font("Segoe UI",14,FontStyle.Regular,GraphicsUnit.Pixel);AutoScaleMode=AutoScaleMode.None;
@@ -45,7 +45,7 @@ namespace VectorFit {
         void RefreshDriver(){activeJson=Driver.TryRead(out driverError);UpdateProgress();}
         void UpdateProgress(){var p=CalibrationProgress.FromSession(session);progress.Maximum=p.Total;progress.Value=Math.Min(progress.Maximum,p.Done);progress.AccessibleName=p.Label;progress.Invalidate();status.Text=p.Label+"  ·  "+L.T(activeJson==null?"Driver ikke tilgjengelig":Driver.Neutral(activeJson)?"Raw Accel: nøytral":"Raw Accel: profil aktiv");}
         void ShowPage(int index) {
-            if(pageIndex==0&&mouse!=null&&!mouse.IsDisposed)draft=new Setup{Mouse=mouse.Text,Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
+            if(pageIndex==0&&mouse!=null&&!mouse.IsDisposed)draft=new Setup{Mouse=mouse.Text,Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value,Arena=arena!=null&&arena.Checked};
             pageIndex=index;foreach(Control old in content.Controls.Cast<Control>().ToArray())old.Dispose();for(int i=0;i<nav.Length;i++){nav[i].BackColor=i==index?accent:panel;nav[i].ForeColor=i==index?bg:ink;}
             if(index==0)SetupPage();else if(index==1)ResultPage();else if(index==2)DriverPage();else if(index==3)StatisticsPage();else HistoryPage();
             UpdateProgress();L.Controls(this);
@@ -73,14 +73,18 @@ namespace VectorFit {
             dpi=Number(draft.Dpi,100,50000,0);cm=Number(draft.Cm360,3,200,1);fov=Number(draft.Hfov,60,140,0);
             fields.Controls.Add(mouse,0,1);fields.Controls.Add(dpi,1,1);fields.Controls.Add(cm,2,1);fields.Controls.Add(fov,3,1);Add(stack,fields);
             var buttons=new FlowLayoutPanel{Height=52};buttons.Controls.Add(Button("Start kalibrering",delegate{Start(false);},230,true));buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,230));buttons.Controls.Add(Button(L.English?"Game setup / blind measurement":"Spilloppsett / blindmåling",OpenGameSetup,320));Add(stack,buttons);
-            var choices=new Panel{Height=64};var circle=CircleChoice();var sensitivity=SensitivityChoice();circle.Dock=DockStyle.Top;sensitivity.Dock=DockStyle.Bottom;choices.Controls.Add(circle);choices.Controls.Add(sensitivity);Add(stack,choices);
+            var choices=new TableLayoutPanel{Height=64,ColumnCount=2,RowCount=2};choices.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,68));choices.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,32));
+            var circle=CircleChoice();var sensitivity=SensitivityChoice();circle.Dock=DockStyle.Fill;sensitivity.Dock=DockStyle.Fill;
+            arena=new CheckBox{Text=L.English?"3D arena (optional)":"3D-arena (valgfritt)",Checked=draft.Arena,Dock=DockStyle.Fill,ForeColor=ink};
+            choices.Controls.Add(circle,0,0);choices.Controls.Add(arena,1,0);choices.Controls.Add(sensitivity,0,1);choices.SetColumnSpan(sensitivity,2);Add(stack,choices);
+            Add(stack,TextLabel(L.English?"The environment stays the same for baseline and proposal. Choose it before starting a new baseline.":"Miljøet er likt for baseline og forslag. Velg det før du starter en ny baseline.",10,false,30));
             Add(stack,TextLabel(DriverSetup.Text("1. Sentrer musen og bruk et komfortabelt grep.\n2. Flick: klikk én gang, også når du bommer. Presisjon: fortsett til treff.\n3. Se forslaget før du tester eller aktiverer det.","1. Center your mouse and use a comfortable grip.\n2. Flick: click once, even on a miss. Precision: keep going until a hit.\n3. Review the proposal before testing or activating it."),11,false,82));
             Add(stack,TextLabel("Fase 1 samler baseline og foreslår innstillinger. Velg forslaget for å starte fase 2 med korrigeringen aktiv. Hver fase har flick og presisjon, med instruksjoner og klikk for å starte hver del. Senere faser kontrollerer neste forslag.",10,false,43));
             AddDetails(stack,"Hjelp med museoppsettet",TextLabel("Slik finner du cm/360°: Mål hvor langt du flytter musen på musematten for én hel omdreining i spillet. Standardverdien 40 er et utgangspunkt, ikke en avlesning fra G703.",10,false,50),TextLabel("DPI må være lik innstillingen på musen. Synsfeltet bestemmer hvordan målene vises; bruk spillets horisontale synsfelt.",10,false,42));
 
         }
         void OpenGameSetup(){
-            var setup=new Setup{Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
+            var setup=new Setup{Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value,Arena=arena!=null&&arena.Checked};
             using(var f=new GameSetupForm(setup,delegate{
                 if((global!=null&&global.IsFiltering)||Process.GetProcessesByName("VectorFit.Game").Length>0||Process.GetProcessesByName("VectorFit.Global").Length>0)throw new Exception(L.English?"Stop the global profile before measuring physical distance.":"Stopp den globale profilen før du måler fysisk avstand.");
                 RefreshDriver();if((activeJson==null&&!Driver.KnownAbsent(driverError))||!Driver.Neutral(activeJson))throw new Exception(L.English?"Blind measurement requires a neutral Raw Accel profile and known driver status. Use Reset to neutral on the global profile page first.":"Blindmåling krever nøytral Raw Accel-profil og kjent driverstatus. Bruk Tilbakestill til nøytral på globalsiden først.");
@@ -94,7 +98,7 @@ namespace VectorFit {
             if(!ab&&!resumeCircles) {
                 if(refine){measured=session.NextRound(SessionName()+".vectorfit.json",!keepPrevious);measured.CalibrateSensitivity=sensitivityEnabled;}
                 else {
-                    var s=new Setup{Mouse=mouse.Text.Trim(),Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
+                    var s=new Setup{Mouse=mouse.Text.Trim(),Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value,Arena=arena!=null&&arena.Checked};
                     if(!s.Valid()||s.Mouse.Length==0)throw new Exception("Fyll ut museoppsettet først.");
                     if(session.Baseline.Count>0&&UiMessage.Show(this,"Starte en ny måling fra nøytralt oppsett? Bruk Ny runde med aktiv profil på Global profil for å bygge videre.","Ny måling",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;
                     measured=new Session{SmallGainProtocol=true,ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Setup=s,Mode=session.Mode,CalibrateSensitivity=sensitivityEnabled};
@@ -165,7 +169,7 @@ namespace VectorFit {
                 if(new FileInfo(d.FileName).Length>128*1024*1024)throw new Exception("Målefilen er for stor.");
                 EnsureFilterStopped();
                 var s=Session.FromJson(File.ReadAllText(d.FileName));session=s;circleEnabled=s.Circles.Laps.Count(s.Circles.Counts)<s.Circles.Goal;
-                ShowPage(1);draft=new Setup{Mouse=s.Setup.Mouse,Dpi=s.Setup.Dpi,Cm360=s.Setup.Cm360,Hfov=s.Setup.Hfov};
+                ShowPage(1);draft=new Setup{Mouse=s.Setup.Mouse,Dpi=s.Setup.Dpi,Cm360=s.Setup.Cm360,Hfov=s.Setup.Hfov,Arena=s.Setup.Arena};
             }
         }
         Control ProfileSelector() {
