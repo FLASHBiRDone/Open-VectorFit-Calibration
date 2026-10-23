@@ -149,9 +149,9 @@ namespace VectorFit {
         public static double? Average(List<Trial> ts){return ts.Count>0&&ts.All(t=>t.FlickScore.HasValue)?(double?)ts.Average(t=>(double)t.FlickScore.Value):null;}
     }
     class ConfigGauges:Control {
-        List<Trial> pa,pb,fa,fb;string context;bool comparable;
+        List<Trial> pa,pb,fa,fb;string context;bool comparable,protocolMismatch;
         static string T(string nb,string en){return DriverSetup.Text(nb,en);}
-        public ConfigGauges(Session s){
+        public ConfigGauges(Session s,bool initial=false){
             Height=436;DoubleBuffered=true;BackColor=Color.FromArgb(28,34,38);
             fa=s.Validation.Where(t=>!t.Corrected).ToList();fb=s.Validation.Where(t=>t.Corrected).ToList();pa=s.PrecisionValidation.Where(t=>!t.Corrected).ToList();pb=s.PrecisionValidation.Where(t=>t.Corrected).ToList();
             comparable=fa.Count==fb.Count&&pa.Count==pb.Count&&fa.Count>=16&&pa.Count==16;
@@ -160,6 +160,11 @@ namespace VectorFit {
                 string note;var history=History.Load(s,Driver.Data,out note);fa=new List<Trial>();pa=new List<Trial>();fb=s.Baseline;pb=s.PrecisionBaseline;
                 if(history.Count>1){var prev=history[history.Count-2].Session;fa=prev.Baseline;pa=prev.PrecisionBaseline;}
                 context=T("Denne rundens måleprofil mot forrige runde · veiledende trend","This round's measured config vs last round · descriptive trend");comparable=false;
+            }
+            if(initial){var first=ResultStory.Initial(s);fa=first==null?new List<Trial>():first.Flick;pa=first==null?new List<Trial>():first.Precision;
+                fb=s.Baseline;pb=s.PrecisionBaseline;
+                context=T("Fast baseline fra første test → denne rundens måleprofil · trend","Fixed first-test baseline → this round's measured config · trend");comparable=false;
+                if(first!=null&&(first.BalancedTargets!=s.BalancedTargets||first.PrecisionFirst!=s.PrecisionFirst)){context+=T(" · ulik testprotokoll"," · different test protocol");protocolMismatch=true;}
             }
             AccessibleName=context;
         }
@@ -173,15 +178,15 @@ namespace VectorFit {
                 string[] units={"ms","%","ms","/ 10"};int col=Width/2;
                 for(int i=0;i<4;i++){int x=16+(i%2)*col,y=55+(i/2)*160;float w=col-32;
                     g.DrawString(names[i],title,ink,x,y);g.DrawString(i==3?T("Høyere er bedre","Higher is better"):T("Lavere er bedre*","Lower is better*"),body,muted,x,y+22);
-                    bool known=a[i].HasValue&&b[i].HasValue;double delta=known?b[i].Value-a[i].Value:0;bool better=i==3?delta>0:delta<0;
+                    bool known=!protocolMismatch&&a[i].HasValue&&b[i].HasValue;double delta=known?b[i].Value-a[i].Value:0;bool better=i==3?delta>0:delta<0;
                     bool hitsHeld=i==0?pb.Count>0&&pa.Count>0&&(double)pb.Count(t=>t.Hit==true)/pb.Count>=(double)pa.Count(t=>t.Hit==true)/pa.Count:i==2?fb.Count>0&&fa.Count>0&&(double)fb.Count(t=>t.Hit==true)/fb.Count>=(double)fa.Count(t=>t.Hit==true)/fa.Count:true;
-                    if(!hitsHeld&&better)known=false;
-                    var color=!known||Math.Abs(delta)<.0001?Color.FromArgb(169,184,188):better?Color.FromArgb(109,218,182):Color.FromArgb(244,116,116);
+                    
+                    var color=!known||(!hitsHeld&&better)||Math.Abs(delta)<.0001?Color.FromArgb(169,184,188):better?Color.FromArgb(109,218,182):Color.FromArgb(244,116,116);
                     using(var brush=new SolidBrush(color))using(var track=new Pen(Color.FromArgb(65,76,82),9))using(var value=new Pen(color,9)){
                         var arc=new RectangleF(x+8,y+55,74,74);g.DrawArc(track,arc,180,180);
                         if(known){double change=a[i]>0?Math.Abs(delta)/a[i].Value:delta==0?0:1;g.DrawArc(value,arc,180,(float)(180*Math.Min(1,change/.25)));}
                         g.DrawString(known?delta.ToString("+0.0;-0.0;0.0"):"—",big,brush,x+98,y+51);
-                        g.DrawString(known?(better?T("Bedre","Better"):Math.Abs(delta)<.0001?T("Uendret","Unchanged"):T("Dårligere","Worse")):T("Mangler sammenlignbare data","No comparable data"),body,brush,x+98,y+81);
+                        g.DrawString(known?(!hitsHeld&&better?T("Raskere, men færre treff","Faster, but fewer hits"):better?T("Bedre","Better"):Math.Abs(delta)<.0001?T("Uendret","Unchanged"):T("Dårligere","Worse")):T("Mangler sammenlignbare data","No comparable data"),body,brush,x+98,y+81);
                     }
                     g.DrawString((a[i].HasValue?a[i].Value.ToString("F1"):"—")+" → "+(b[i].HasValue?b[i].Value.ToString("F1"):"—")+" "+units[i],body,ink,x,y+122);
                 }

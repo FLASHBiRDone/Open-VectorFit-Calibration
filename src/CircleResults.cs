@@ -51,3 +51,21 @@ namespace VectorFit {
         }
     }
 }
+
+namespace VectorFit {
+    class MeasuredCircleComparison:Control {
+        readonly CircleMedian before,after;readonly CircleData a,b;
+        public MeasuredCircleComparison(CircleData baseline,CircleData current){a=baseline;b=current;before=CircleAnalysis.Median(a);after=CircleAnalysis.Median(b);Height=330;DoubleBuffered=true;BackColor=Color.FromArgb(28,34,38);}
+        protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
+            using(var font=new Font("Segoe UI",13,GraphicsUnit.Pixel))using(var blue=new Pen(Color.FromArgb(123,173,242),2))using(var green=new Pen(Color.FromArgb(109,218,182),2))using(var grid=new Pen(Color.FromArgb(80,95,104),1)){
+                var all=before.Points.Concat(after.Points).ToList();double extent=all.Select(p=>Math.Max(Math.Abs(p.X),Math.Abs(p.Y))).DefaultIfEmpty(1).Max();float scale=(float)(90/Math.Max(1.15,extent)),x=Width/2,y=145;
+                grid.DashStyle=DashStyle.Dash;g.DrawEllipse(grid,x-scale,y-scale,2*scale,2*scale);
+                Action<CircleMedian,Pen> draw=(m,p)=>{if(m.Points.Count>2)g.DrawPolygon(p,m.Points.Select(q=>new PointF(x+(float)q.X*scale,y+(float)q.Y*scale)).ToArray());};draw(before,blue);draw(after,green);
+                g.DrawString(DriverSetup.Text("Faktisk målte medianformer · ingen simulering","Measured median shapes · no simulation"),font,Brushes.White,16,14);
+                g.DrawString(DriverSetup.Text("Blå: første baseline · grønn: målt forslag","Blue: first baseline · green: measured proposal"),font,Brushes.White,16,250);
+                g.DrawString(DriverSetup.Text("Akseforhold (1 = rund): ","Axis ratio (1 = round): ")+(before.Ellipse.Valid?before.Report.Roundness.ToString("F3"):"—")+" → "+(after.Ellipse.Valid?after.Report.Roundness.ToString("F3"):"—"),font,Brushes.White,16,275);
+                g.DrawString(DriverSetup.Text("Sentrert og størrelsesnormalisert. Rundere form beviser ikke bedre sikting.","Centered and size-normalized. A rounder shape does not prove better aim."),font,Brushes.LightGray,16,300);
+            }
+        }
+    }
+}

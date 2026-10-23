@@ -13,9 +13,39 @@ namespace VectorFit {
         public double ErrorA,ErrorB,TimeA,TimeB,PrecisionA,PrecisionB;
         public int FlickN,HitsA,HitsB,PrecisionN,PrecisionHitsA,PrecisionHitsB,MissesA,MissesB;
     }
+    public class InitialReference {
+        public string CreatedUtc;
+        public bool BalancedTargets,PrecisionFirst;
+        public Setup Setup; public Correction Input;
+        public CircleData Circles;
+        public List<Trial> Flick,Precision;
+    }
     public static class ResultStory {
+        static string T(string nb,string en){return DriverSetup.Text(nb,en);}
+        public static InitialReference Initial(Session s){
+            if(s.InitialBaseline!=null)return s.InitialBaseline;
+            string note;var history=History.Load(s,Driver.Data,out note);var first=history[0].Session;
+            if(first.Round!=1||first.Baseline.Count==0)return null;
+            return new InitialReference{Circles=JObject.FromObject(first.Circles).ToObject<CircleData>(),CreatedUtc=first.CreatedUtc,BalancedTargets=first.BalancedTargets,PrecisionFirst=first.PrecisionFirst,Setup=JObject.FromObject(first.Setup).ToObject<Setup>(),Input=first.InputCorrection.Copy(),Flick=JArray.FromObject(first.Baseline).ToObject<List<Trial>>(),Precision=JArray.FromObject(first.PrecisionBaseline).ToObject<List<Trial>>()};
+        }
+        public static string Explanation(Session s){
+            var r=Record(s);if(!r.Complete)return T("Samle en full A/B-test før profilen vurderes. Målerne viser bare foreløpige forskjeller.","Complete the A/B test before judging the proposal. Gauges show provisional differences only.");
+            var pa=s.PrecisionValidation.Where(t=>!t.Corrected).ToList();var pb=s.PrecisionValidation.Where(t=>t.Corrected).ToList();
+            var qa=pa.Select(Trajectory.Measure).ToList();var qb=pb.Select(Trajectory.Measure).ToList();
+            string control=qa.All(q=>q.Available)&&qb.All(q=>q.Available)?T("Etterkorrigering: ","Corrective travel: ")+(100*qa.Average(q=>q.CorrectionDistance)).ToString("F1")+" → "+(100*qb.Average(q=>q.CorrectionDistance)).ToString("F1")+" %.":T("Etterkorrigering mangler.","Corrective travel unavailable.");
+            var lines=new List<string>{T("Presisjon: ","Precision: ")+r.MeanPrecisionA.ToString("F0")+" → "+r.MeanPrecisionB.ToString("F0")+T(" ms i gjennomsnitt, inkludert bom og korrigering. Treff: "," ms on average, including misses and corrections. Hits: ")+r.PrecisionHitsA+" → "+r.PrecisionHitsB+" / "+r.PrecisionN+". "+control};
+            lines.Add(T("Flick: bullseye-treff ","Flick: bullseye hits ")+r.HitsA+" → "+r.HitsB+" / "+r.FlickN+T(". Grønt på én måler betyr ikke at hele profilen er bedre.",". Green on one gauge does not mean the whole profile is better."));
+            string why;PrecisionCheck.Overall(s,SequentialComparison.Evaluate(s),out why);
+            lines.Add(why);
+            if(!SequentialComparison.Evaluate(s).GuardsPassed)lines.Add(T("Flick-kontrollen stopper også anbefalingen: ","The flick safeguards also block approval: ")+SequentialComparison.Evaluate(s).Note);
+            lines.Add(r.Passed?T("Neste steg: bekreft samme forslag på nytt før videre justering.","Next: confirm the same proposal again before further adjustment."):T("Neste steg: behold måleprofilen foreløpig og bekreft samme forslag på nytt. Det beregner ingen ny korrigering.","Next: keep the measured profile for now and repeat the same proposal. This does not fit another correction."));
+            return String.Join("\n\n",lines);
+        }
+
         public static string Key(Session s){
             var obj=new JObject(new JProperty("Setup",JObject.FromObject(s.Setup)),new JProperty("Mode",s.Mode.ToString()),new JProperty("Input",JObject.FromObject(s.InputCorrection)),new JProperty("Candidate",JObject.FromObject(s.Correction)),new JProperty("Curve",JObject.FromObject(s.ActiveCurve)));
+            if(s.ControlPriority)obj["Objective"]="precision-speed-or-control-v1";
+            if(s.BalancedTargets)obj["TargetPlan"]="balanced-distance-v1";
             if(s.PrecisionFirst)obj["Protocol"]="precision-first-rings-v1";
             using(var hash=SHA256.Create())return BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(obj.ToString()))).Replace("-","");
         }

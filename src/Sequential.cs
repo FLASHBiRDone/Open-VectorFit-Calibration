@@ -65,7 +65,7 @@ namespace VectorFit {
             }else if(SignTail(worse,report.Pairs)<=Alpha&&db>da*1.05+.001){report.Decision=ComparisonDecision.Worse;report.Note="A/B viser tydelig større klikkavvik med forslaget. Behold den aktive profilen.";}
             else if(trials.Count==64){report.Decision=ComparisonDecision.Inconclusive;report.Note="A/B er ferdig, men forbedring er ikke tydelig nok. Behold den aktive profilen.";}
             else {report.Decision=ComparisonDecision.Continue;report.Note="Forskjellen er fortsatt usikker. A/B fortsetter med 16 forsøk til.";}
-            var guards=new List<string>();if(!hitsOkay)guards.Add("færre treff");if(!timeOkay)guards.Add("langsommere klikk");if(!tailOkay)guards.Add("større avvik i de svakeste forsøkene");if(!directionOkay)guards.Add("større retningsspredning");if(!pathOkay)guards.Add(pathAvailable?"mer etterkorrigering":"manglende bevegelsesbane");
+            var guards=new List<string>();if(!hitsOkay)guards.Add("færre treff");if(!timeOkay)guards.Add(DriverSetup.Text("lengre klikk- eller bevegelsestid","longer click or movement duration"));if(!tailOkay)guards.Add("større avvik i de svakeste forsøkene");if(!directionOkay)guards.Add("større retningsspredning");if(!pathOkay)guards.Add(pathAvailable?"mer etterkorrigering":"manglende bevegelsesbane");
             if(guards.Count>0)report.Note+=" "+"Vurderingen tar hensyn til: "+String.Join(", ",guards)+".";
             return report;
         }

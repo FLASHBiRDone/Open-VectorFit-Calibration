@@ -18,7 +18,7 @@ namespace VectorFit {
         class State {public string Source,Rendered;}
         static readonly ConditionalWeakTable<Control,State> originals=new ConditionalWeakTable<Control,State>();
         public static string T(string value){if(String.IsNullOrEmpty(value))return value;string translated=English?pattern.Replace(value,m=>translations[m.Value]):value;return Regex.Replace(translated,@"\bVectorFit\b(?!\.)","TrueTrack");}
-        public static void Load(){try{English=File.ReadAllText(Path.Combine(Driver.Data,"language.txt")).Trim()=="en";}catch{English=false;}}
+        public static void Load(){try{English=File.ReadAllText(Path.Combine(Driver.Data,"language.txt")).Trim()=="en";}catch{English=true;}}
         public static void Save(){Directory.CreateDirectory(Driver.Data);File.WriteAllText(Path.Combine(Driver.Data,"language.txt"),English?"en":"nb");}
         public static void SetText(Control control,string value){var state=originals.GetValue(control,key=>new State());state.Source=value;state.Rendered=T(value);control.Text=state.Rendered;}
         public static void Controls(Control root){

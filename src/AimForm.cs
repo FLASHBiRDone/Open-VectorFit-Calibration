@@ -10,7 +10,7 @@ namespace VectorFit {
     class AimForm:Form {
         CurveEngine curve;readonly Setup setup;Correction correction;readonly Correction inputCorrection;Correction hardwareCorrection;bool confirmation;bool validation;
         Session automaticSession,comparisonSession;int round=1,warmupFinished,calibrationGoal=80,circlesFinished,circleGoal=15,nextPair;bool adaptive,autoBegin,sequential,baselineOnly;
-        bool rings;
+        bool rings,balanced;
         bool dualTask,precision,precisionMappingDone,precisionComparisonDone,introPending;
         int flickFinished,flickComparisonGoal=32;
         List<AimClick> clicks=new List<AimClick>();
@@ -29,12 +29,12 @@ namespace VectorFit {
         public int ComparisonGoal {get{return validation?(precision||precisionComparisonDone?flickComparisonGoal:goal):sequential?32:64;}}
         public bool Sequential {get{return sequential;}}
         public AimForm(Session session,bool ab,bool integrated=false,bool startAutomatically=false):this(session.Setup,session.Correction,ab,session.ActiveCurve,session.InputCorrection) {
-            rings=session.PrecisionFirst;hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
+            balanced=session.BalancedTargets;rings=session.PrecisionFirst;hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
             adaptive=session.AdaptiveCalibration;autoBegin=startAutomatically&&!dualTask;calibrationGoal=adaptive?48:80;circleGoal=session.Circles.Goal;circlesFinished=ab?0:Math.Min(circleGoal,session.Circles.Laps.Count(session.Circles.Counts));
             sequential=session.AdaptiveValidation;baselineOnly=session.GuidedCalibration&&session.Round==1&&!ab;
             comparisonSession=new Session{FitReady=session.FitReady,Repeatable=session.Repeatable,Mode=session.Mode,AdaptiveValidation=sequential};
             PrepareTargets(ab);
-            if(integrated&&!ab)automaticSession=new Session{PrecisionFirst=session.PrecisionFirst,DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
+            if(integrated&&!ab)automaticSession=new Session{ControlPriority=session.ControlPriority,BalancedTargets=session.BalancedTargets,PrecisionFirst=session.PrecisionFirst,DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
         }
         public AimForm(Setup s,Correction c,bool ab,CurveProfile cp=null,Correction input=null) {
             setup=s;correction=c;inputCorrection=input??new Correction();hardwareCorrection=inputCorrection;validation=ab;curve=new CurveEngine(cp??new CurveProfile());Text=ab?"VectorFit | A/B-test":"VectorFit | Kalibrering";
@@ -65,18 +65,19 @@ namespace VectorFit {
             for(int block=0;block<blocks;block++) {
                 var temp=new List<Target>();
                 for(int rep=0;rep<(ab?2:1);rep++)for(int d=0;d<8;d++)temp.Add(new Target{
-                    Direction=d,Radius=ab?radii[rep*8+d]:8+random.NextDouble()*10,Angle=ab?angles[rep*8+d]:d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9,Corrected=ab&&(((block==1||block==2)^flip))});
+                    Direction=d,Radius=balanced?BalancedRadius(ab?rep:block,d):ab?radii[rep*8+d]:8+random.NextDouble()*10,Angle=balanced?d*Math.PI/4:ab?angles[rep*8+d]:d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9,Corrected=ab&&(((block==1||block==2)^flip))});
                 foreach(var t in temp.OrderBy(x=>random.Next()))queue.Enqueue(t);
             }
             goal=ab?64:calibrationGoal;
         }
+        internal static double BalancedRadius(int block,int direction){return (block+direction)%2==0?8:18;}
         Target ComparisonTarget(int direction,int id,bool corrected,double radius,double angle){return new Target{Direction=direction,PairId=id,Corrected=corrected,Radius=radius,Angle=angle};}
         void AddComparisonStage(int stage){
             foreach(int d in Enumerable.Range(0,8).OrderBy(v=>random.Next())){
-                int id=++nextPair;double radius=8+random.NextDouble()*10,angle=d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9;
+                int id=++nextPair;double radius=balanced?BalancedRadius(stage==2?1:0,d):8+random.NextDouble()*10,angle=balanced?d*Math.PI/4:d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9;
                 bool firstB=stage==0?random.Next(2)==1:stage==1?extensionFirstB[d]:!extensionFirstB[d];
                 queue.Enqueue(ComparisonTarget(d,id,firstB,radius,angle));queue.Enqueue(ComparisonTarget(d,id,!firstB,radius,angle));
-                if(stage==0){id=++nextPair;radius=8+random.NextDouble()*10;angle=d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9;queue.Enqueue(ComparisonTarget(d,id,!firstB,radius,angle));queue.Enqueue(ComparisonTarget(d,id,firstB,radius,angle));}
+                if(stage==0){id=++nextPair;radius=balanced?BalancedRadius(1,d):8+random.NextDouble()*10;angle=balanced?d*Math.PI/4:d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9;queue.Enqueue(ComparisonTarget(d,id,!firstB,radius,angle));queue.Enqueue(ComparisonTarget(d,id,firstB,radius,angle));}
             }
         }
         bool ExtendComparison(){
@@ -88,7 +89,7 @@ namespace VectorFit {
             if(automaticSession==null||validation||finished!=goal)return false;
             automaticSession.Baseline=Results;Analysis.Compute(automaticSession);
             if(adaptive&&(!automaticSession.FitReady||!automaticSession.Repeatable)&&calibrationGoal<80){
-                for(int block=0;block<2;block++)foreach(int d in Enumerable.Range(0,8).OrderBy(v=>random.Next()))queue.Enqueue(new Target{Direction=d,Radius=8+random.NextDouble()*10,Angle=d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9});
+                for(int block=0;block<2;block++)foreach(int d in Enumerable.Range(0,8).OrderBy(v=>random.Next()))queue.Enqueue(new Target{Direction=d,Radius=balanced?BalancedRadius(block,d):8+random.NextDouble()*10,Angle=balanced?d*Math.PI/4:d*Math.PI/4+(random.NextDouble()-.5)*Math.PI/9});
                 calibrationGoal+=16;goal=calibrationGoal;feedback="Målingene varierer. Vi samler 16 ekstra klikk før sammenligningen.";return true;
             }
             if(dualTask&&!precisionMappingDone){StartPrecision(false);return true;}
@@ -240,7 +241,7 @@ namespace VectorFit {
         string PartTitle {get{return precision?"DEL 2 · PRESISJON":!validation&&warmupFinished<8?"ØVELSE · FLICK":"DEL 1 · FLICK";}}
         void DrawInstructions(Graphics g){
             float width=Math.Min(900,ClientSize.Width-80),left=(ClientSize.Width-width)/2f,top=ClientSize.Height/2f-170;
-            using(var bg=new SolidBrush(BackColor))g.FillRectangle(bg,left-20,top-20,width+40,340);
+            using(var bg=new SolidBrush(BackColor))g.FillRectangle(bg,left-20,top-20,width+40,395);
             using(var sf=new StringFormat{Alignment=StringAlignment.Center}){
                 Action<string,Font,Brush,float,float> line=(text,font,brush,y,h)=>g.DrawString(L.T(text),font,brush,new RectangleF(left,y,width,h),sf);
                 line(confirmation?"BEKREFTELSE · SAMME A OG B":"FASE "+round+(validation?" · A/B-KONTROLL":baselineOnly?" · BASELINE":" · MÅLING MED FASEPROFIL"),body,Brushes.White,top,40);
@@ -248,7 +249,8 @@ namespace VectorFit {
                 line(precision?"Treff den grønne prikken så raskt du klarer med kontroll.":"Sikt raskt mot den grønne prikken og klikk én gang.",body,Brushes.White,top+112,52);
                 line(precision?"Ved bom: korriger og klikk igjen på samme mål. Klokken fortsetter.":"Første klikk går videre, også ved bom. Ikke vent for å finjustere.",body,Brushes.White,top+164,54);
                 line("Maks 3 sekunder per mål. Både tid og treff teller.",small,Brushes.White,top+224,30);
-                line("Klikk for å starte denne delen",body,Brushes.White,top+270,38);
+                line(DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger. Finn en behagelig håndstilling.","Center your mouse on the pad, with room in every direction. Find a comfortable hand position."),small,Brushes.White,top+260,48);
+                line("Klikk for å starte denne delen",body,Brushes.White,top+320,38);
             }
         }
 #if DEVELOPMENT

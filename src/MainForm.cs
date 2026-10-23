@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 namespace VectorFit {
     class MainForm:Form {
         Color bg=Color.FromArgb(19,24,27),panel=Color.FromArgb(28,34,38),ink=Color.FromArgb(237,244,242),muted=Color.FromArgb(169,184,188),accent=Color.FromArgb(109,218,182);
-        Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
+        Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
         TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
         public MainForm() {
             Text="TrueTrack | Kalibrering og global profil";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
@@ -96,7 +96,7 @@ namespace VectorFit {
                     var s=new Setup{Mouse=mouse.Text.Trim(),Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
                     if(!s.Valid()||s.Mouse.Length==0)throw new Exception("Fyll ut museoppsettet først.");
                     if(session.Baseline.Count>0&&UiMessage.Show(this,"Starte en ny måling fra nøytralt oppsett? Bruk Ny runde med aktiv profil på Global profil for å bygge videre.","Ny måling",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;
-                    measured=new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Setup=s,Mode=session.Mode,CalibrateSensitivity=sensitivityEnabled};
+                    measured=new Session{ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Setup=s,Mode=session.Mode,CalibrateSensitivity=sensitivityEnabled};
                 }
             }else if(!session.FitReady)throw new Exception("Fullfør kalibreringen slik at en profil kan beregnes først.");
             RefreshDriver();
@@ -123,7 +123,7 @@ namespace VectorFit {
                 using(var result=new CircleResultForm(session.Circles,session.InputCorrection)){if(result.ShowDialog(this)!=DialogResult.OK){ShowPage(3);return;}}
                 VerifyDriver(fingerprint);
             }
-            var testSettings=ab?new Session{PrecisionFirst=session.PrecisionFirst,FrozenProposal=session.FrozenProposal,TestInputCorrection=candidateActive?session.Correction:session.InputCorrection,DualTask=true,Setup=session.Setup,Mode=session.Mode,Round=session.Round,Correction=session.Correction,Curve=session.Curve,InputCorrection=session.InputCorrection,FitReady=session.FitReady,Repeatable=session.Repeatable,AdaptiveValidation=true,TrajectoryFitting=session.TrajectoryFitting,AdaptiveCalibration=session.AdaptiveCalibration}:session;
+            var testSettings=ab?new Session{ControlPriority=session.ControlPriority,BalancedTargets=session.BalancedTargets,PrecisionFirst=session.PrecisionFirst,FrozenProposal=session.FrozenProposal,TestInputCorrection=candidateActive?session.Correction:session.InputCorrection,DualTask=true,Setup=session.Setup,Mode=session.Mode,Round=session.Round,Correction=session.Correction,Curve=session.Curve,InputCorrection=session.InputCorrection,FitReady=session.FitReady,Repeatable=session.Repeatable,AdaptiveValidation=true,TrajectoryFitting=session.TrajectoryFitting,AdaptiveCalibration=session.AdaptiveCalibration}:session;
             using(var form=new AimForm(testSettings,ab,!ab,circlesComplete)) {
                 form.ShowDialog(this);
                 VerifyDriver(fingerprint);
@@ -155,6 +155,7 @@ namespace VectorFit {
         string SessionName(){return "maaling-"+DateTime.Parse(session.CreatedUtc,CultureInfo.InvariantCulture,DateTimeStyles.RoundtripKind).ToString("yyyyMMdd-HHmmss-fff")+"-v13";}
         string RawProfileName(){return SessionName()+(session.ReadyForRawAccel?"":"-proeveprofil");}
         void SaveSession() {
+            if(session.InitialBaseline==null)session.InitialBaseline=ResultStory.Initial(session);
             Directory.CreateDirectory(Driver.Data);string path=Path.Combine(Driver.Data,SessionName()+".vectorfit.json");
             File.WriteAllText(path,JsonConvert.SerializeObject(session,Formatting.Indented));
         }
@@ -202,7 +203,9 @@ namespace VectorFit {
             Add(stack,TextLabel("Baseline er målingen før A/B. A er profilen du målte med; B er forslaget. Negative differanser betyr lavere avvik eller kortere tid. Avvik vises som prosent av målavstanden.",11,false,48));
             Add(stack,ProfileSelector());
             var counts=new RoundStatistics(session);Add(stack,TextLabel("Baseline: "+counts.Baseline.Count+"  ·  A: "+counts.A.Count+" / "+session.ComparisonGoal/2+"  ·  B: "+counts.B.Count+" / "+session.ComparisonGoal/2,10,false,24));
+            Add(stack,Narrative(session));
             Add(stack,new ConfigGauges(session));
+            Add(stack,new ConfigGauges(session,true));
             Add(stack,new ComparisonChart(session));
             Add(stack,new MovementChart(session));
             if(session.AdaptiveValidation)Add(stack,TextLabel("A/B inkluderer bom, klikk uten bevegelse og tidsavbrudd. Ugyldige forsøk teller som bom med minst 100 % avvik. Ukjente bevegelsesmål vises som —.",10,false,42));
@@ -216,12 +219,31 @@ namespace VectorFit {
             Add(stack,TextLabel("pp = prosentpoeng. Tomme resultater vises som —. Delvise A/B-tester er foreløpige; se vurderingen under Resultat og A/B.",10,false,42));
             Add(stack,Button("Åpne en annen måling",delegate{LoadSession();ShowPage(3);},250));
         }
+        void CircleCheck(){
+            EnsureFilterStopped();if(session.UsesInterception)throw new Exception(DriverSetup.Text("Sirkelkontroll støtter foreløpig Raw Accel-profiler.","Circle verification currently supports Raw Accel profiles."));
+            var first=ResultStory.Initial(session);if(first==null||first.Circles==null||first.Circles.Laps.Count==0)throw new Exception(DriverSetup.Text("Første baseline mangler sirkeldata.","The first baseline has no circle data."));
+            RefreshDriver();if(activeJson==null||!Driver.MatchesCorrection(activeJson,session.Correction))throw new Exception(DriverSetup.Text("Aktiver dette forslaget med Raw Accel først. Sirkelkontrollen endrer ikke profilen.","Activate this proposal with Raw Accel first. Circle verification does not change the profile."));
+            string fingerprint=Driver.Fingerprint(activeJson);
+            using(var test=new CircleForm(session.Setup,session.Correction)){test.ShowDialog(this);VerifyDriver(fingerprint);if(!test.Completed)return;session.VerifiedCircles=test.Data;session.VerifiedCircleProfile=session.Correction.Copy();}
+            session.InitialBaseline=first;SaveSession();ShowPage(1);
+        }
+        Control Narrative(Session value){var label=TextLabel(ResultStory.Explanation(value),11,false,260);int lastWidth=-1;label.SizeChanged+=delegate{if(label.Width==lastWidth)return;lastWidth=label.Width;label.Height=Math.Max(90,TextRenderer.MeasureText(label.Text,label.Font,new Size(label.Width,Int32.MaxValue),TextFormatFlags.WordBreak).Height+24);};return label;}
+        void AddCircleComparison(FlowLayoutPanel stack){
+            var first=ResultStory.Initial(session);
+            if(first==null||first.Circles==null||first.Circles.Laps.Count==0)return;
+            Add(stack,Button(DriverSetup.Text("Valgfritt: mål sirkler med aktivt forslag","Optional: measure circles with active proposal"),CircleCheck,420));
+            if(session.VerifiedCircles==null)return;
+            Add(stack,TextLabel(DriverSetup.Text("Faktisk målte sirkler · første baseline og kontroll etter profilendring. Ingen simulering eller ny tilpasning.","Measured circles · first baseline and verification after profile change. No simulation or refitting."),11,false,45));
+            Add(stack,new MeasuredCircleComparison(first.Circles,session.VerifiedCircles));
+        }
         void ResultPage() {
             var stack=Stack();content.Controls.Add(stack);
             Add(stack,TextLabel(session.FitReady?"Fase "+session.Round+" · "+(session.Round==1?"Baseline analysert":"Måling analysert"):"Datainnhenting · ingen ferdig profil ennå",22,true,43));
             Add(stack,TextLabel(session.Baseline.Count==0?"Kalibrer musen først. Her ser du målingene og kan teste korreksjonen før den brukes utenfor programmet.":session.Validation.Count>0?"Resultatet gjelder dette profilparet. Ingen innstillinger endres når du leser analysen.":session.Notes,11,false,50));
             if(session.Baseline.Count==0){if(CanResumeCircles)Add(stack,Button("Fortsett til måltest",delegate{Start(false,false,false,true);},240,true));else Add(stack,Button("Gå til kalibrering",delegate{ShowPage(0);},230,true));return;}
+            Add(stack,Narrative(session));
             Add(stack,new ConfigGauges(session));
+            Add(stack,new ConfigGauges(session,true));
             if(session.Validation.Count>0||session.FrozenProposal){
                 Add(stack,TextLabel(ResultStory.Headline(session),18,true,56));
                 Add(stack,TextLabel("A = måleprofilen. B = samme forslag. Tallene nedenfor er A → B; tidene er medianer.",10,false,36));
@@ -232,6 +254,7 @@ namespace VectorFit {
                 AddDetails(stack,"Hvorfor denne vurderingen?",TextLabel(session.Notes,10,false,110));
                 AddDetails(stack,"Kontroller av samme forslag",TextLabel(ResultStory.RepeatSummary(session),10,false,Math.Max(100,55+session.PriorComparisons.Count*30)));
             }
+            AddCircleComparison(stack);
             if(session.FitReady){if(session.Validation.Count>0||session.FrozenProposal)AddDetails(stack,"Innstillingene som sammenlignes",new ProposalView(session));else Add(stack,new ProposalView(session));
                 if(session.CanTryRawAccel){var next=new FlowLayoutPanel{Height=52};
                     next.Controls.Add(Button("Prøv forslaget · start fase "+(session.Round+1),delegate{if(ActivateProfile(false))Start(false,true);},320,session.ReadyForRawAccel||session.Validation.Count==0));

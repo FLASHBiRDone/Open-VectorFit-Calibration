@@ -60,6 +60,11 @@ namespace VectorFit {
         public string Version="0.13.0", CreatedUtc=DateTime.UtcNow.ToString("o");
         public bool ConservativeSensitivity=true;
         public bool GuidedCalibration, DualTask;
+        public CircleData VerifiedCircles;
+        public Correction VerifiedCircleProfile;
+        public InitialReference InitialBaseline;
+        public bool ControlPriority;
+        public bool BalancedTargets;
         public bool PrecisionFirst; // Explicit protocol flag; historical sessions retain their assessment.
 
         public bool FrozenProposal;
@@ -108,7 +113,7 @@ namespace VectorFit {
         }
         public Session NextRound(string parentMeasurement,bool useCandidate=true) {
             if(!CanTryRawAccel)throw new Exception("Beregn en standardprofil før du starter neste runde.");
-            return new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
+            return new Session{InitialBaseline=ResultStory.Initial(this),ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
                 Setup=new Setup{Mouse=Setup.Mouse,Dpi=Setup.Dpi,Cm360=Setup.Cm360,Hfov=Setup.Hfov,Device=Setup.Device}};
         }
         public Session Confirmation(string source){
