@@ -1,4 +1,4 @@
-# Open VectorFit Calibration: current algorithm
+# TrueTrack: current algorithm
 
 This document describes the algorithm used for new calibration sessions. Thresholds are engineering choices unless explicitly identified as statistical tests. The software measures performance and tests bounded proposals; it does not guarantee better aim or identify a hardware defect.
 
@@ -100,3 +100,15 @@ Tests cover fitting, corrected hits, misses, polling-rate variation, paired sche
 - https://www.yorku.ca/mack/CHI01.htm — trajectory measures complement endpoint accuracy.
 - https://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/signtest.htm — sign tests and binomial interpretation.
 - https://itl.nist.gov/div898/handbook/prc/section4/prc473.htm — multiple-comparison error allocation.
+
+## Optional game setup and blind distance estimate
+
+Game setup changes the draft for the next new baseline; it does not mutate an existing session, apply a driver profile or change game settings. Existing sessions retain their recorded DPI, cm/360 and horizontal FOV. All helpers can be skipped. Defaults are 1600 DPI, 40 cm/360 and 103 degrees horizontal FOV, not an inferred optimum.
+
+For ordinary perspective, horizontal FOV = 2 atan(tan(vertical FOV / 2) × width / height). The user must supply the aspect ratio actually used by the game. Resolution alone does not determine FOV, and stretched or reference-aspect game settings require separate interpretation.
+
+With unchanged DPI and linear game sensitivity, suggested game sensitivity = current sensitivity × current measured cm/360 / desired cm/360. This is a manual suggestion, not an automatic calibration result.
+
+The blind helper records five horizontal net displacements from the same relative-input mouse between pairs of clicks, without a visual trace. Absolute counts × 2.54 / nominal DPI gives an estimated distance in centimetres. The median is the suggested preferred cm/360; the range is displayed. Attempts outside 3–200 cm are retried. Focus loss discards the incomplete attempt and requires Space to resume. Escape cancels. Five completed attempts require explicit Enter acceptance.
+
+Blind estimates require known driver status, neutral Raw Accel and no running TrueTrack Interception filter. Driver state is checked again before accepting the result. Other input transforms and inaccurate nominal DPI can still bias the estimate. The helper does not detect an in-game turn, measure sensor DPI or establish an optimal sensitivity. A ruler and an actual turn in-game are needed to verify physical cm/360.

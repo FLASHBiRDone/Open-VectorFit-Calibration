@@ -32,6 +32,18 @@ namespace VectorFit {
             log=new List<string>();checks=0;
             try{
                 Check(Math.Abs(new Setup{Dpi=800,Cm360=40}.DegreesPerCount-.028575)<1e-9,"DPI/cm360 conversion");
+                Check(Math.Abs(GameMath.Distance(16000,1600)-25.4)<1e-9,"Blind distance converts counts using DPI");
+                Check(Math.Abs(GameMath.Distance(-16000,1600)-25.4)<1e-9,"Blind distance accepts either horizontal direction");
+                Check(Math.Abs(GameMath.Sensitivity(2,30,60)-1)<1e-9,"Longer target distance lowers game sensitivity");
+                Check(Math.Abs(GameMath.HorizontalFov(90,1)-90)<1e-9,"Square aspect preserves vertical/horizontal FOV");
+                Check(Math.Abs(GameMath.HorizontalFov(90,16.0/9)-121.2844929)<1e-6,"Vertical FOV conversion uses aspect ratio");
+                bool invalidFov=false;try{GameMath.HorizontalFov(Double.NaN,1);}catch(ArgumentException){invalidFov=true;}Check(invalidFov,"Invalid FOV is rejected");
+                var gameSetup=new Setup{Dpi=800,Cm360=55,Hfov=100};
+                using(var setupDialog=new GameSetupForm(gameSetup,delegate{})){
+                    Check(setupDialog.Dpi==800&&setupDialog.Cm360==55&&setupDialog.Hfov==100,"Optional game setup starts with existing values");
+                    Check(gameSetup.Dpi==800&&gameSetup.Cm360==55,"Opening optional setup does not mutate measurements");
+                    Check(setupDialog.CancelButton!=null&&setupDialog.CancelButton.DialogResult==System.Windows.Forms.DialogResult.Cancel,"Optional setup has a cancel/skip action");
+                }
                 Check(new Setup().Dpi==1600,"Default DPI is 1600");
                 Check(!new Session().UsesInterception,"New calibrations default to Raw Accel without Interception");
                 using(var global=new GlobalForm()) {

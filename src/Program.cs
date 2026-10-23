@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -15,6 +15,9 @@ namespace VectorFit {
                 Native.SetProcessDPIAware();Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
 #if DEVELOPMENT
                 if(Array.IndexOf(args,"en")>=0)L.English=true;
+                if(args.Length>1&&args[0]=="--render-game-setup"){
+                    using(var f=new GameSetupForm(new Setup(),delegate{})){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                }
                 if(args.Length>1&&args[0]=="--render-driver-setup"){
                     using(var f=new DriverSetupForm(Array.IndexOf(args,"interception")>=0)){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();
                         using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}
@@ -45,11 +48,11 @@ namespace VectorFit {
                     }return 0;
                 }
 #endif
-                Application.ThreadException+=delegate(object sender,System.Threading.ThreadExceptionEventArgs e){UiMessage.Show(e.Exception.Message,"VectorFit");};
+                Application.ThreadException+=delegate(object sender,System.Threading.ThreadExceptionEventArgs e){UiMessage.Show(e.Exception.Message,"TrueTrack");};
                 Application.Run(new MainForm());return 0;
             }catch(Exception e){
                 if(args.Length>0){File.WriteAllText(Path.Combine(Driver.Root,"startup-error.txt"),e.ToString());return 1;}
-                UiMessage.Show("VectorFit kunne ikke starte.\n\n"+e.Message+"\n\nPakk ut hele mappen før du åpner VectorFit.exe.","VectorFit");return 1;
+                UiMessage.Show("TrueTrack kunne ikke starte.\n\n"+e.Message+"\n\nPakk ut hele mappen før du åpner VectorFit.exe.","TrueTrack");return 1;
             }
         }
     }

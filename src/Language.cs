@@ -17,7 +17,7 @@ namespace VectorFit {
         static readonly Regex pattern=new Regex("(?<![\\p{L}])(?:"+String.Join("|",translations.Keys.OrderByDescending(k=>k.Length).Select(Regex.Escape))+")(?![\\p{L}])",RegexOptions.Compiled);
         class State {public string Source,Rendered;}
         static readonly ConditionalWeakTable<Control,State> originals=new ConditionalWeakTable<Control,State>();
-        public static string T(string value){return !English||String.IsNullOrEmpty(value)?value:pattern.Replace(value,m=>translations[m.Value]);}
+        public static string T(string value){if(String.IsNullOrEmpty(value))return value;string translated=English?pattern.Replace(value,m=>translations[m.Value]):value;return Regex.Replace(translated,@"\bVectorFit\b(?!\.)","TrueTrack");}
         public static void Load(){try{English=File.ReadAllText(Path.Combine(Driver.Data,"language.txt")).Trim()=="en";}catch{English=false;}}
         public static void Save(){Directory.CreateDirectory(Driver.Data);File.WriteAllText(Path.Combine(Driver.Data,"language.txt"),English?"en":"nb");}
         public static void SetText(Control control,string value){var state=originals.GetValue(control,key=>new State());state.Source=value;state.Rendered=T(value);control.Text=state.Rendered;}
@@ -290,7 +290,7 @@ Avstand til start|Distance from start
 % av radius|% of radius
 × = ufullstendig eller for ujevn til formberegning. Alle forsøk lagres.|× = incomplete or too irregular for shape fitting. All attempts are saved.
 Mål bevegelsene. Test en personlig retningsprofil.|Measure your movement. Test a personal mouse profile.
-Start med oppsettet du spiller med|Start with your in-game setup
+Start med standard eller eget oppsett|Start with defaults or your own setup
 Bruk samme DPI, grep og musematte gjennom hele testen. Standardprofilen bruker Raw Accel uten Interception. Du kan velge kurvekorreksjon separat på resultatsiden.|Use the same DPI, grip and mouse pad throughout. The default profile uses Raw Accel without Interception. Curve correction is a separate option on the results page.
 Navn på mus / oppsett|Mouse / setup name
 DPI på musen|Mouse DPI

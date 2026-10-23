@@ -71,6 +71,6 @@ Training exercises should work without a global input driver. Driver-based calib
 
 ## Contribute
 
-[Open an issue](https://github.com/FLASHBiRDone/Open-VectorFit-Calibration/issues/new) with a reproducible bug, a proposed exercise, a usability problem or a focused implementation idea. Explain the problem and how we could tell whether the change helps.
+[Open an issue](https://github.com/FLASHBiRDone/TrueTrack/issues/new) with a reproducible bug, a proposed exercise, a usability problem or a focused implementation idea. Explain the problem and how we could tell whether the change helps.
 
 If you share measurements, remove identifiers and only share data you are comfortable making public. Public GitHub issues are not a private support channel.

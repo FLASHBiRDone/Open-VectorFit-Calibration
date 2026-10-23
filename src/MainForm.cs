@@ -15,12 +15,13 @@ namespace VectorFit {
         Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
         TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
         public MainForm() {
-            Text="VectorFit | Kalibrering og global profil";ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
+            Text="TrueTrack | Kalibrering og global profil";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
             StartPosition=FormStartPosition.CenterScreen;BackColor=bg;ForeColor=ink;Font=new Font("Segoe UI",14,FontStyle.Regular,GraphicsUnit.Pixel);AutoScaleMode=AutoScaleMode.None;
             var root=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=1,RowCount=4,Padding=new Padding(30,20,30,18)};
             root.RowStyles.Add(new RowStyle(SizeType.Absolute,85));root.RowStyles.Add(new RowStyle(SizeType.Absolute,53));root.RowStyles.Add(new RowStyle(SizeType.Percent,100));root.RowStyles.Add(new RowStyle(SizeType.Absolute,36));Controls.Add(root);
-            var head=new Panel{Dock=DockStyle.Fill};head.Controls.Add(new Label{Text="VectorFit",Font=new Font("Segoe UI",34,FontStyle.Bold,GraphicsUnit.Pixel),ForeColor=ink,AutoSize=true,Location=new Point(0,0)});
-            head.Controls.Add(new Label{Text="Mål bevegelsene. Test en personlig retningsprofil.",AutoSize=true,ForeColor=muted,Location=new Point(3,51)});root.Controls.Add(head,0,0);
+            var head=new Panel{Dock=DockStyle.Fill};head.Controls.Add(new Label{Text="TrueTrack",Font=new Font("Segoe UI",34,FontStyle.Bold,GraphicsUnit.Pixel),ForeColor=ink,AutoSize=true,Location=new Point(75,0)});
+            head.Controls.Add(new Label{Text="Mål bevegelsene. Test en personlig retningsprofil.",AutoSize=true,ForeColor=muted,Location=new Point(78,51)});root.Controls.Add(head,0,0);
+            using(var stream=typeof(MainForm).Assembly.GetManifestResourceStream("TrueTrack.Logo")){if(stream!=null){using(var loaded=Image.FromStream(stream)){var logo=new PictureBox{Image=new Bitmap(loaded),SizeMode=PictureBoxSizeMode.Zoom,Location=new Point(0,0),Size=new Size(66,66),AccessibleName="TrueTrack"};logo.Disposed+=delegate{logo.Image.Dispose();};head.Controls.Add(logo);}}}
             var language=new ComboBox{DropDownStyle=ComboBoxStyle.DropDownList,Width=140,Location=new Point(900,10),Anchor=AnchorStyles.Top|AnchorStyles.Right,BackColor=panel,ForeColor=ink,AccessibleName="Language / Språk",Tag="language"};
             language.Items.AddRange(new object[]{"Norsk","English"});language.SelectedIndex=L.English?1:0;head.Controls.Add(language);
             language.SelectedIndexChanged+=delegate{Guard(delegate{L.English=language.SelectedIndex==1;L.Save();ShowPage(pageIndex);if(global!=null&&!global.IsDisposed)L.Controls(global);});};
@@ -37,7 +38,7 @@ namespace VectorFit {
             var b=new Button{Text=text,Width=width,Height=40,FlatStyle=FlatStyle.Flat,BackColor=primary?accent:panel,ForeColor=primary?bg:ink,Margin=new Padding(0,0,10,10),Cursor=Cursors.Hand};
             b.FlatAppearance.BorderSize=0;b.Click+=delegate{if(!busy)Guard(action);};return b;
         }
-        void Guard(Action action){try{action();}catch(Exception e){UiMessage.Show(this,e.Message,"VectorFit",MessageBoxButtons.OK,MessageBoxIcon.Information);}}
+        void Guard(Action action){try{action();}catch(Exception e){UiMessage.Show(this,e.Message,"TrueTrack",MessageBoxButtons.OK,MessageBoxIcon.Information);}}
         Label TextLabel(string text,int size=11,bool bold=false,int height=55) {return new Label{Text=text,ForeColor=size>=18?ink:muted,Font=new Font("Segoe UI",size*1.2f,bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel),Dock=DockStyle.Top,Height=height,AutoEllipsis=false};}
         FlowLayoutPanel Stack() {var p=new FlowLayoutPanel{Dock=DockStyle.Fill,AutoScroll=true,FlowDirection=FlowDirection.TopDown,WrapContents=false};bool resizing=false;p.SizeChanged+=delegate{if(resizing)return;resizing=true;try{p.SuspendLayout();p.AutoScroll=false;foreach(Control c in p.Controls)c.Width=Math.Max(600,p.Width-SystemInformation.VerticalScrollBarWidth-16);p.AutoScroll=true;p.ResumeLayout(true);}finally{resizing=false;}};return p;}
         void Add(FlowLayoutPanel stack,Control c) {c.Width=Math.Max(600,stack.Width-SystemInformation.VerticalScrollBarWidth-16);c.Margin=new Padding(0,0,0,14);stack.Controls.Add(c);}
@@ -61,8 +62,8 @@ namespace VectorFit {
 #endif
         void SetupPage() {
             var stack=Stack();content.Controls.Add(stack);
-            Add(stack,TextLabel("Start med oppsettet du spiller med",22,true,43));
-            Add(stack,TextLabel("Bruk samme DPI, grep og musematte som i spillet. Testen finner et forslag og sammenligner det med profilen du bruker nå.",11,false,42));
+            Add(stack,TextLabel("Start med standard eller eget oppsett",22,true,43));
+            Add(stack,TextLabel(L.English?"You can start with the defaults. Game setup, circles and sensitivity adjustment are optional. Match your mouse DPI when known.":"Du kan starte med standardverdiene. Spilloppsett, sirkler og sensitivitetsjustering er valgfrie. Bruk musens faktiske DPI hvis du kjenner den.",11,false,42));
             var fields=new TableLayoutPanel{Height=82,ColumnCount=4,RowCount=2};
             for(int i=0;i<4;i++)fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,i==0?34:22));
             string[] labels={"Navn på mus / oppsett","DPI på musen","Følsomhet · cm / 360°","Horisontalt synsfelt"};
@@ -70,12 +71,19 @@ namespace VectorFit {
             mouse=new TextBox{Text=draft.Mouse,Dock=DockStyle.Fill,BackColor=panel,ForeColor=ink,BorderStyle=BorderStyle.FixedSingle,MaxLength=80};
             dpi=Number(draft.Dpi,100,50000,0);cm=Number(draft.Cm360,3,200,1);fov=Number(draft.Hfov,60,140,0);
             fields.Controls.Add(mouse,0,1);fields.Controls.Add(dpi,1,1);fields.Controls.Add(cm,2,1);fields.Controls.Add(fov,3,1);Add(stack,fields);
-            var buttons=new FlowLayoutPanel{Height=52};buttons.Controls.Add(Button("Start kalibrering",delegate{Start(false);},230,true));buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,230));Add(stack,buttons);
+            var buttons=new FlowLayoutPanel{Height=52};buttons.Controls.Add(Button("Start kalibrering",delegate{Start(false);},230,true));buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,230));buttons.Controls.Add(Button(L.English?"Game setup / blind measurement":"Spilloppsett / blindmåling",OpenGameSetup,320));Add(stack,buttons);
             var choices=new Panel{Height=64};var circle=CircleChoice();var sensitivity=SensitivityChoice();circle.Dock=DockStyle.Top;sensitivity.Dock=DockStyle.Bottom;choices.Controls.Add(circle);choices.Controls.Add(sensitivity);Add(stack,choices);
             Add(stack,new CalibrationSteps());
             Add(stack,TextLabel("Fase 1 samler baseline og foreslår innstillinger. Velg forslaget for å starte fase 2 med korrigeringen aktiv. Hver fase har flick og presisjon, med instruksjoner og klikk for å starte hver del. Senere faser kontrollerer neste forslag.",10,false,43));
             AddDetails(stack,"Hjelp med museoppsettet",TextLabel("Slik finner du cm/360°: Mål hvor langt du flytter musen på musematten for én hel omdreining i spillet. Standardverdien 40 er et utgangspunkt, ikke en avlesning fra G703.",10,false,50),TextLabel("DPI må være lik innstillingen på musen. Synsfeltet bestemmer hvordan målene vises; bruk spillets horisontale synsfelt.",10,false,42));
 
+        }
+        void OpenGameSetup(){
+            var setup=new Setup{Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
+            using(var f=new GameSetupForm(setup,delegate{
+                if((global!=null&&global.IsFiltering)||Process.GetProcessesByName("VectorFit.Game").Length>0||Process.GetProcessesByName("VectorFit.Global").Length>0)throw new Exception(L.English?"Stop the global profile before measuring physical distance.":"Stopp den globale profilen før du måler fysisk avstand.");
+                RefreshDriver();if((activeJson==null&&!Driver.KnownAbsent(driverError))||!Driver.Neutral(activeJson))throw new Exception(L.English?"Blind measurement requires a neutral Raw Accel profile and known driver status. Use Reset to neutral on the global profile page first.":"Blindmåling krever nøytral Raw Accel-profil og kjent driverstatus. Bruk Tilbakestill til nøytral på globalsiden først.");
+            })){if(f.ShowDialog(this)==DialogResult.OK){dpi.Value=(decimal)f.Dpi;cm.Value=(decimal)f.Cm360;fov.Value=(decimal)f.Hfov;}}
         }
         NumericUpDown Number(double value,int min,int max,int decimals){return new NumericUpDown{Minimum=min,Maximum=max,Value=(decimal)Analysis.Clamp(value,min,max),DecimalPlaces=decimals,Dock=DockStyle.Top,BackColor=panel,ForeColor=ink,BorderStyle=BorderStyle.FixedSingle,Margin=new Padding(0,0,18,0)};}
         void Start(bool ab,bool refine=false,bool keepPrevious=false,bool resumeCircles=false) {

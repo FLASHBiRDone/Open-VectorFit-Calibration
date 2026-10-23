@@ -34,7 +34,7 @@ namespace VectorFit {
     }
     class CircleResultForm:Form {
         public CircleResultForm(CircleData data,Correction input){
-            Text="VectorFit | Medianform";ClientSize=new Size(920,600);MinimumSize=new Size(800,600);StartPosition=FormStartPosition.CenterParent;BackColor=Color.FromArgb(19,24,27);ForeColor=Color.FromArgb(237,244,242);Font=new Font("Segoe UI",14,GraphicsUnit.Pixel);AutoScaleMode=AutoScaleMode.None;
+            Text="TrueTrack | Medianform";ClientSize=new Size(920,600);MinimumSize=new Size(800,600);StartPosition=FormStartPosition.CenterParent;BackColor=Color.FromArgb(19,24,27);ForeColor=Color.FromArgb(237,244,242);Font=new Font("Segoe UI",14,GraphicsUnit.Pixel);AutoScaleMode=AutoScaleMode.None;
             var root=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(24),RowCount=4,ColumnCount=1};root.RowStyles.Add(new RowStyle(SizeType.Absolute,42));root.RowStyles.Add(new RowStyle(SizeType.Absolute,370));root.RowStyles.Add(new RowStyle(SizeType.Percent,100));root.RowStyles.Add(new RowStyle(SizeType.Absolute,46));Controls.Add(root);
             root.Controls.Add(new Label{Text="Slik ble sirklene dine",Dock=DockStyle.Fill,Font=new Font("Segoe UI",24,FontStyle.Bold,GraphicsUnit.Pixel)},0,0);
             root.Controls.Add(new CircleMedianChart(data,input){Dock=DockStyle.Fill},0,1);
