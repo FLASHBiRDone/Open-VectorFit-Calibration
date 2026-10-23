@@ -28,6 +28,7 @@ namespace VectorFit {
         public double TargetX,TargetY, EndX,EndY, ReactionMs, FlickMs, TotalMs, ClickError, ErrorX, ErrorY;
         public bool Valid, Corrected;
         public bool? Hit;
+        public int? FlickScore;
         public int PairId;
         public List<AimClick> Clicks=new List<AimClick>();
         public double HitRadiusDegrees;
@@ -59,6 +60,8 @@ namespace VectorFit {
         public string Version="0.13.0", CreatedUtc=DateTime.UtcNow.ToString("o");
         public bool ConservativeSensitivity=true;
         public bool GuidedCalibration, DualTask;
+        public bool PrecisionFirst; // Explicit protocol flag; historical sessions retain their assessment.
+
         public bool FrozenProposal;
         public string FrozenKey="";
         public List<ComparisonRecord> PriorComparisons=new List<ComparisonRecord>();
@@ -105,7 +108,7 @@ namespace VectorFit {
         }
         public Session NextRound(string parentMeasurement,bool useCandidate=true) {
             if(!CanTryRawAccel)throw new Exception("Beregn en standardprofil før du starter neste runde.");
-            return new Session{GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
+            return new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
                 Setup=new Setup{Mouse=Setup.Mouse,Dpi=Setup.Dpi,Cm360=Setup.Cm360,Hfov=Setup.Hfov,Device=Setup.Device}};
         }
         public Session Confirmation(string source){
@@ -288,7 +291,7 @@ namespace VectorFit {
             return length<1e-8?0:area/(length*trial.Radius);
         }
         public static string Validate(Session s) {
-            if(s.AdaptiveValidation){var report=SequentialComparison.Evaluate(s);s.ValidationPassed=report.Decision==ComparisonDecision.Improved;if(report.Finished)s.ComparisonGoal=report.Clicks;string precisionNote="";if(s.DualTask){bool okay=PrecisionCheck.Acceptable(s.PrecisionValidation,out precisionNote);s.ValidationPassed=s.ValidationPassed&&okay;}return report.Note+(s.DualTask?" "+precisionNote:"");}
+            if(s.AdaptiveValidation){var report=SequentialComparison.Evaluate(s);s.ValidationPassed=report.Decision==ComparisonDecision.Improved;if(report.Finished)s.ComparisonGoal=report.Clicks;string precisionNote="";if(s.DualTask){s.ValidationPassed=PrecisionCheck.Overall(s,report,out precisionNote);}return report.Note+(s.DualTask?" "+precisionNote:"");}
             var a=s.Validation.Where(t=>t.Valid&&!t.Corrected).ToList();var b=s.Validation.Where(t=>t.Valid&&t.Corrected).ToList();
             s.ValidationPassed=false;
             if(Enumerable.Range(0,8).Any(d=>a.Count(t=>t.Direction==d)<4||b.Count(t=>t.Direction==d)<4))return "A/B-testen er ikke fullført.";

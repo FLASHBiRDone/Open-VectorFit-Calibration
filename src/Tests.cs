@@ -44,6 +44,14 @@ namespace VectorFit {
                     Check(gameSetup.Dpi==800&&gameSetup.Cm360==55,"Opening optional setup does not mutate measurements");
                     Check(setupDialog.CancelButton!=null&&setupDialog.CancelButton.DialogResult==System.Windows.Forms.DialogResult.Cancel,"Optional setup has a cancel/skip action");
                 }
+                Check(FlickScoring.Score(0)==10&&FlickScoring.Score(1)==10&&FlickScoring.Score(1.01)==8&&FlickScoring.Score(3)==6&&FlickScoring.Score(5)==2&&FlickScoring.Score(5.01)==0&&FlickScoring.Score(Double.NaN)==0,"Five expanded rings preserve bullseye and boundary scores");
+                Check(PrecisionCheck.Time(new Trial{Hit=true,TotalMs=950,Clicks=new List<AimClick>{new AimClick(300,0,0,false),new AimClick(950,1,0,true)}})==950,"Time to hit includes previous miss and correction time");
+                Check(PrecisionCheck.Time(new Trial{Hit=false,TotalMs=200})==3000,"Failed attempts receive full timeout, never fast-miss reward");
+                var pt=PrecisionPairs(16,1,1);foreach(var tr in pt){tr.TotalMs=tr.Corrected?600:900;tr.Clicks=new List<AimClick>{new AimClick(tr.TotalMs,tr.EndX,tr.EndY,true)};if(tr.Corrected)tr.Clicks.Insert(0,new AimClick(200,0,0,false));}
+                var protocolOld=new Session();var protocolNew=new Session{PrecisionFirst=true};Check(ResultStory.Key(protocolOld)!=ResultStory.Key(protocolNew),"Ring protocol and precision objective change frozen comparison identity");
+                string pn;Check(PrecisionCheck.Improved(pt,out pn),"Faster actual hits can improve despite extra miss clicks");
+                var approved=new Session{PrecisionFirst=true,PrecisionValidation=pt};var guard=new ComparisonReport{Decision=ComparisonDecision.Inconclusive,GuardsPassed=true};Check(PrecisionCheck.Overall(approved,guard,out pn),"Precision improvement can pass with unchanged flicks");guard.GuardsPassed=false;Check(!PrecisionCheck.Overall(approved,guard,out pn),"Flick regression blocks precision-first approval");
+                foreach(var tr in pt.Where(t=>t.Corrected)){tr.TotalMs=1000;tr.Clicks.Last().T=1000;}Check(!PrecisionCheck.Improved(pt,out pn),"Slower precise hits do not pass precision-first assessment");
                 Check(new Setup().Dpi==1600,"Default DPI is 1600");
                 Check(!new Session().UsesInterception,"New calibrations default to Raw Accel without Interception");
                 using(var global=new GlobalForm()) {

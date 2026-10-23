@@ -1,20 +1,20 @@
-# TrueTrack
+﻿# TrueTrack
 
 <img src="src/assets/truetrack.png" alt="TrueTrack logo" width="96">
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.14.1-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.1/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.15.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.15.0/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.1/TrueTrack-Windows.zip)** Â· [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.14.1) Â· [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.15.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.15.0) · [Roadmap](ROADMAP.md)
 
-Extract the entire ZIP, open the **TrueTrack** folder and run **VectorFit.exe**. The executable keeps its legacy filename for compatibility. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
+Extract the entire ZIP, open the **TrueTrack** folder and run **TrueTrack.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
 Measure your flicks and precision, compare sensitivity profiles, and check whether changes help without simply taking longer. Designed for standard mice across brands.
 
-**Available now:** calibration, A/B testing, repeat confirmation, optional game setup with FOV and preferred cm/360, blind distance estimation, and optional global profiles.
+**Available now:** expanded flick scoring rings, precision-first assessment, four before/after gauges, calibration, A/B testing, repeat confirmation, optional game setup with FOV and preferred cm/360, blind distance estimation, and optional global profiles.
 
-Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimentalâ€”not yet a full Aimlabs replacement. Testers and contributors are welcome.
+Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimental—not yet a full Aimlabs replacement. Testers and contributors are welcome.
 
 The app supports English and Norwegian. Calibration and local comparisons do not require installing an input driver. Global profiles use optional drivers with separate setup and compatibility considerations.
 
@@ -57,7 +57,7 @@ Requires Windows x64, .NET Framework 4.7.2 or later and Windows PowerShell. Obta
 
     .\build.ps1 -DependencyDirectory C:\path\to\dependencies
 
-Outputs are in artifacts/VectorFit. Run VectorFit.exe. Tests can be run without installing or activating a driver:
+Outputs are in artifacts/TrueTrack. Run TrueTrack.exe. Tests can be run without installing or activating a driver:
 
     $report = Join-Path $PWD 'artifacts\tests.txt'
     Start-Process .\artifacts\VectorFit\VectorFit.Tests.exe -ArgumentList '--selftest', $report -Wait

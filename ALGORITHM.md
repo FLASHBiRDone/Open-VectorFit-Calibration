@@ -1,4 +1,4 @@
-# TrueTrack: current algorithm
+﻿# TrueTrack: current algorithm
 
 This document describes the algorithm used for new calibration sessions. Thresholds are engineering choices unless explicitly identified as statistical tests. The software measures performance and tests bounded proposals; it does not guarantee better aim or identify a hardware defect.
 
@@ -57,7 +57,7 @@ This component requires its own validated Interception profile. Raw Accel must b
 - The first 32 attempts use randomized ABBA/BAAB quartets per direction. The next 16 use four AB and four BA pairs across randomized directions. The final 16 reverse that per-direction order.
 - No decisions are made mid-checkpoint. Unclear results extend by 16. A clear improvement or worsening stops the run. At 64, insufficient evidence is reported as inconclusive, never as equivalence.
 
-There are three prespecified routes to approval. Each uses a one-sided exact binomial tail at p=0.5, with alpha=0.05/(3 routes * 3 looks). Support must cover at least six directions.
+There are three prespecified routes to ending the flick comparison early. Flick improvement alone does not approve a new profile. Each uses a one-sided exact binomial tail at p=0.5, with alpha=0.05/(3 routes * 3 looks). Support must cover at least six directions.
 
 1. Distance: count pairs where B error is less than 0.95*A error minus 0.001 target distance; additionally require at least 5% lower median distance. Ties/non-wins count against approval.
 2. Hits: use the discordant hit pairs (A miss/B hit versus A hit/B miss). Require positive net hit improvement and median distance no more than 0.002 worse.
@@ -73,13 +73,17 @@ The exact binomial and multiple-look thresholds have their nominal interpretatio
 
 After the sequential flick comparison, 32 precision trials form 16 matched A/B pairs with balanced order per direction. Every click is recorded. Timeouts contribute 3000 ms to time summaries.
 
-A complete comparison requires matching target geometry, one A and one B per pair, correct directional coverage and internally consistent clicks. Precision acceptance requires at least eight hits in each profile, no fewer B hits, no extra B miss clicks, and at most 5% increases in both median and total target time. Flick improvement must also pass this precision guard for overall approval. This is a regression safeguard, not a separate significance test.
+A complete comparison requires matching target geometry, one A and one B per pair, correct directional coverage and internally consistent clicks. The primary objective is lower total time to an actual precision hit. Time runs from target appearance through every miss and correction until the successful click. A failed attempt costs 3000 ms; failed attempts are never omitted.
+
+New sessions explicitly store PrecisionFirst=true. Approval requires at least eight hits per profile, no fewer B hits, at least 5% lower total precision time, and a one-sided sign-tail <=0.05 over all 16 pairs where a win means B takes less than 95% of A's time. Non-wins, including ties, count against approval. Wins must cover at least six directions. This is one fixed precision look, after flick selection; it is not a guarantee of a benefit or proof against practice effects.
+
+The completed flick comparison must pass all regression guards above, including median error at most 0.002 worse, but need not independently improve. Extra precision miss clicks are reported rather than vetoing a faster successful hit. Repeated confirmation is recommended. Historical sessions without the protocol flag retain their original flick-first evaluation and original target presentation.
 
 ## Confirmation without further fitting
 
 A confirmation run clones the session and freezes the same A/B proposal. It preserves a compact record of the previous comparison and clears only the current comparison data. It does not advance the calibration phase, refit, or activate a new profile. Changing profile type requires leaving the frozen comparison.
 
-A SHA-256 identity covers setup, profile mode, input correction, candidate correction and active curve. Frozen proposals are checked on load. Repeat summaries compare records only when this identity matches. Different configurations are not pooled.
+A SHA-256 identity includes the new precision-first/ring protocol when present and covers setup, profile mode, input correction, candidate correction and active curve. Frozen proposals are checked on load. Repeat summaries compare records only when this identity matches. Different configurations are not pooled.
 
 The result headline distinguishes incomplete data, supported improvement, promising change, slower-but-closer results and mixed or weaker results. A descriptive promising result requires at least 5% less median flick error, no fewer flick hits, at most 5% longer median flick time, and no deterioration beyond the specified precision limits. It never substitutes for the statistical approval rules.
 
@@ -112,3 +116,9 @@ With unchanged DPI and linear game sensitivity, suggested game sensitivity = cur
 The blind helper records five horizontal net displacements from the same relative-input mouse between pairs of clicks, without a visual trace. Absolute counts × 2.54 / nominal DPI gives an estimated distance in centimetres. The median is the suggested preferred cm/360; the range is displayed. Attempts outside 3–200 cm are retried. Focus loss discards the incomplete attempt and requires Space to resume. Escape cancels. Five completed attempts require explicit Enter acceptance.
 
 Blind estimates require known driver status, neutral Raw Accel and no running TrueTrack Interception filter. Driver state is checked again before accepting the result. Other input transforms and inaccurate nominal DPI can still bias the estimate. The helper does not detect an in-game turn, measure sensor DPI or establish an optimal sensitivity. A ruler and an actual turn in-game are needed to verify physical cm/360.
+
+## Flick rings and comparison gauges
+
+New-protocol flick targets retain the original 0.65-degree bullseye (minimum 5 pixels) and add rings at 2, 3, 4 and 5 times that radius. Scores from inside outward are 10, 8, 6, 4 and 2; outside is zero. The original bullseye remains the actual hit boundary, including for all hit-rate guards. Scores are recorded per attempt, with zero for timeout. Historical attempts have no score and are not retrospectively scored or pooled with the changed visual task.
+
+Both results and statistics show four gauges: mean precision time per target (including failed attempts), mean precision corrective travel as a percentage of target distance, mean flick time and mean flick points. A/B compares the current candidate B to its measured input A. Without A/B, linked round baselines are shown only as a descriptive trend. Missing measurements remain unavailable. Red/green represent the direction of an observed difference, not statistical confidence. Faster times are not colored as improvement when hit rate decreases. Arc saturation represents 25% relative change; exact signed differences and before/after values remain visible.

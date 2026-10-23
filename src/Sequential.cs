@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,6 +6,7 @@ namespace VectorFit {
     public enum ComparisonDecision { Incomplete, Continue, Improved, Worse, Inconclusive }
     public class ComparisonReport {
         public ComparisonDecision Decision;
+        public bool GuardsPassed;
         public int Clicks,Pairs,CloserPairs,LessCorrectionPairs,ExtraHits;
         public double DistanceP=1,CorrectionP=1,HitP=1;
         public string Note="";
@@ -43,6 +44,7 @@ namespace VectorFit {
             bool directionOkay=Analysis.DirectionBias(b)<=Analysis.DirectionBias(a)+.005;
             bool pathOkay=pathAvailable&&cb<=ca+.02&&Analysis.Median(qb.Select(q=>q.Overshoot))<=Analysis.Median(qa.Select(q=>q.Overshoot))+.02&&Analysis.Median(qb.Select(q=>q.PathExcess))<=Analysis.Median(qa.Select(q=>q.PathExcess))+.03&&Analysis.Median(qb.Select(q=>(double)q.Reentries))<=Analysis.Median(qa.Select(q=>(double)q.Reentries))+.5;
             double correctionTimeA=Analysis.Median(qa.Select(q=>q.CorrectionMs)),correctionTimeB=Analysis.Median(qb.Select(q=>q.CorrectionMs));pathOkay=pathOkay&&correctionTimeB<=correctionTimeA+Math.Max(20,correctionTimeA*.1);
+            report.GuardsPassed=session.FitReady&&session.Repeatable&&hitsOkay&&timeOkay&&tailOkay&&directionOkay&&pathOkay&&db<=da+.002;
             var closer=new List<int>();var betterPath=new List<int>();var hitWins=new List<int>();int worse=0,hitLosses=0;
             for(int i=0;i<a.Count;i++){
                 if(Distance(b[i])<Distance(a[i])*.95-.001)closer.Add(a[i].Direction);

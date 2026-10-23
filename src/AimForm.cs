@@ -10,6 +10,7 @@ namespace VectorFit {
     class AimForm:Form {
         CurveEngine curve;readonly Setup setup;Correction correction;readonly Correction inputCorrection;Correction hardwareCorrection;bool confirmation;bool validation;
         Session automaticSession,comparisonSession;int round=1,warmupFinished,calibrationGoal=80,circlesFinished,circleGoal=15,nextPair;bool adaptive,autoBegin,sequential,baselineOnly;
+        bool rings;
         bool dualTask,precision,precisionMappingDone,precisionComparisonDone,introPending;
         int flickFinished,flickComparisonGoal=32;
         List<AimClick> clicks=new List<AimClick>();
@@ -28,12 +29,12 @@ namespace VectorFit {
         public int ComparisonGoal {get{return validation?(precision||precisionComparisonDone?flickComparisonGoal:goal):sequential?32:64;}}
         public bool Sequential {get{return sequential;}}
         public AimForm(Session session,bool ab,bool integrated=false,bool startAutomatically=false):this(session.Setup,session.Correction,ab,session.ActiveCurve,session.InputCorrection) {
-            hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
+            rings=session.PrecisionFirst;hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
             adaptive=session.AdaptiveCalibration;autoBegin=startAutomatically&&!dualTask;calibrationGoal=adaptive?48:80;circleGoal=session.Circles.Goal;circlesFinished=ab?0:Math.Min(circleGoal,session.Circles.Laps.Count(session.Circles.Counts));
             sequential=session.AdaptiveValidation;baselineOnly=session.GuidedCalibration&&session.Round==1&&!ab;
             comparisonSession=new Session{FitReady=session.FitReady,Repeatable=session.Repeatable,Mode=session.Mode,AdaptiveValidation=sequential};
             PrepareTargets(ab);
-            if(integrated&&!ab)automaticSession=new Session{DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
+            if(integrated&&!ab)automaticSession=new Session{PrecisionFirst=session.PrecisionFirst,DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
         }
         public AimForm(Setup s,Correction c,bool ab,CurveProfile cp=null,Correction input=null) {
             setup=s;correction=c;inputCorrection=input??new Correction();hardwareCorrection=inputCorrection;validation=ab;curve=new CurveEngine(cp??new CurveProfile());Text=ab?"VectorFit | A/B-test":"VectorFit | Kalibrering";
@@ -197,6 +198,7 @@ namespace VectorFit {
                 if(tr.Hit==true){hitPulse=clock.Elapsed.TotalMilliseconds;hitPosition=point;}
             }
 
+            if(rings&&!precision)tr.FlickScore=clicked?FlickScoring.Score(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180)):0;
             if(precision){
                 if(!clicked)tr.TotalMs=PrecisionCheck.TimeLimit;
                 (validation?PrecisionValidationResults:PrecisionResults).Add(tr);finished++;
@@ -229,6 +231,7 @@ namespace VectorFit {
             }}
         }
 #if DEVELOPMENT
+        public void PreviewRings(){WindowState=FormWindowState.Normal;Size=new Size(1280,800);rings=true;warmupFinished=8;current=new Target{Angle=0,Radius=10};phase="flick";}
         public void Preview(bool hit){WindowState=FormWindowState.Normal;Size=new Size(1280,800);warmupFinished=8;finished=24;phase="countdown";clickPulse=clock.Elapsed.TotalMilliseconds;if(hit){hitPulse=clickPulse;hitPosition=new PointF(Width/2+3,Height/2+2);}}
 #endif
         PointF Project(double yaw,double pitch) {
@@ -267,6 +270,8 @@ namespace VectorFit {
             if(phase=="flick"&&current!=null) {
                 double a=current.Angle;var p=Project(Math.Cos(a)*current.Radius,Math.Sin(a)*current.Radius);
                 float radius=TargetRadius;
+                if(rings&&!precision)for(int ring=5;ring>=2;ring--){float rr=radius*ring;using(var fill=new SolidBrush(Color.FromArgb(32+ring*7,64,114,126)))g.FillEllipse(fill,p.X-rr,p.Y-rr,rr*2,rr*2);using(var line=new Pen(Color.FromArgb(150,153,193,199),1))g.DrawEllipse(line,p.X-rr,p.Y-rr,rr*2,rr*2);}
+
                 using(var brush=new SolidBrush(Color.FromArgb(109,218,182)))g.FillEllipse(brush,p.X-radius,p.Y-radius,2*radius,2*radius);
                 using(var pen=new Pen(Color.FromArgb(160,109,218,182),1))g.DrawEllipse(pen,p.X-radius-5,p.Y-radius-5,2*radius+10,2*radius+10);
             }else {
@@ -277,6 +282,7 @@ namespace VectorFit {
                     var sz=g.MeasureString(sub,small);using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,sub,small,brush,cx-sz.Width/2,cy+98);
                 }
             }
+            if(rings&&!precision)PaintText.Draw(g,DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0")+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+" / 10":""),small,Brushes.White,32,Height-55);
             if(current!=null&&current.Warmup)PaintText.Draw(g,"Øvelsesrunde: lagres ikke",body,Brushes.White,32,80);
             if(dualTask){if(phase=="ready")DrawInstructions(g);else using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
             DrawEffects(g);

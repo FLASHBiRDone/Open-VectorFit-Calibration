@@ -16,7 +16,7 @@ namespace VectorFit {
             var ts=source.ToList();if(ts.Count==0)return "Ingen presisjonsmåling ennå.";
             return "Treff: "+ts.Count(t=>t.Hit==true)+" / "+ts.Count+" · Tid per mål: "+Analysis.Median(ts.Select(Time)).ToString("F0")+" ms · Bomklikk: "+ts.Sum(t=>Misses(t));
         }
-        public static bool Acceptable(List<Trial> ts,out string note){
+        public static bool Acceptable(List<Trial> ts,out string note,bool structureOnly=false){
             note="Presisjonskontrollen er ikke fullført. Ingen samlet forbedring er bekreftet.";
             if(ts==null||ts.Count!=ComparisonCount||ts.Any(t=>t==null||t.Clicks==null||!t.Hit.HasValue||t.PairId<=0||!Finite(t.TotalMs)||t.TotalMs<0||!Finite(t.TargetX)||!Finite(t.TargetY)||!Finite(t.HitRadiusDegrees)||t.HitRadiusDegrees<=0))return false;
             var groups=ts.GroupBy(t=>t.PairId).ToList();
@@ -25,10 +25,23 @@ namespace VectorFit {
             if(Enumerable.Range(0,8).Any(d=>a.Count(t=>t.Direction==d)!=2)||Enumerable.Range(0,16).Any(i=>a[i].Direction!=b[i].Direction||Math.Abs(a[i].TargetX-b[i].TargetX)>1e-8||Math.Abs(a[i].TargetY-b[i].TargetY)>1e-8||Math.Abs(a[i].HitRadiusDegrees-b[i].HitRadiusDegrees)>1e-8))return false;
             if(ts.Any(t=>t.Clicks.Any(c=>!Finite(c.T)||!Finite(c.X)||!Finite(c.Y)||c.T<0||c.T>t.TotalMs)||t.Clicks.Count(c=>c.Hit)!=(t.Hit==true?1:0)||t.Hit==true&&(!t.Valid||t.Clicks.Count==0||!t.Clicks.Last().Hit)))return false;
             if(a.Count(t=>t.Hit==true)<8||b.Count(t=>t.Hit==true)<8){note="For få presisjonstreff til å bekrefte kontroll. Ingen samlet forbedring er bekreftet.";return false;}
+            if(structureOnly)return true;
             // A regression guard, not a separate statistical claim of improvement.
             bool okay=b.Count(t=>t.Hit==true)>=a.Count(t=>t.Hit==true)&&Analysis.Median(b.Select(Time))<=Analysis.Median(a.Select(Time))*1.05&&b.Sum(t=>Time(t))<=a.Sum(t=>Time(t))*1.05&&b.Sum(t=>Misses(t))<=a.Sum(t=>Misses(t));
             note=okay?"Presisjonskontrollen viser ingen tydelig forverring innenfor grensene. Dette er ikke et eget bevis på forbedring.":"Presisjonsdelen fikk færre treff, flere bomklikk eller over 5 % lengre tid. Behold profilen.";
             return okay;
+        }
+        public static bool Improved(List<Trial> ts,out string note){
+            if(!Acceptable(ts,out note,true))return false;
+            var pairs=ts.GroupBy(t=>t.PairId).ToList();
+            var a=pairs.Select(g=>g.Single(t=>!t.Corrected)).ToList();var b=pairs.Select(g=>g.Single(t=>t.Corrected)).ToList();
+            var wins=Enumerable.Range(0,a.Count).Where(i=>Time(b[i])<Time(a[i])*.95).ToList();
+            bool pass=b.Count(t=>t.Hit==true)>=a.Count(t=>t.Hit==true)&&b.Sum(t=>Time(t))<=a.Sum(t=>Time(t))*.95&&SequentialComparison.SignTail(wins.Count,a.Count)<=.05&&wins.Select(i=>a[i].Direction).Distinct().Count()>=6;
+            note=pass?DriverSetup.Text("Presisjon: kortere samlet tid til treff, med minst like mange treff. Gjenta samme forslag.","Precision: lower total time to hit, with at least as many hits. Repeat this proposal."):DriverSetup.Text("Raskere presisjon er ikke tydelig nok bekreftet. Behold profilen og gjenta samme forslag.","Faster precision is not clearly supported. Keep the profile and repeat this proposal.");return pass;
+        }
+        public static bool Overall(Session s,ComparisonReport flick,out string note){
+            bool precision=s.PrecisionFirst?Improved(s.PrecisionValidation,out note):Acceptable(s.PrecisionValidation,out note);
+            return precision&&(s.PrecisionFirst?flick.Finished&&flick.GuardsPassed:flick.Decision==ComparisonDecision.Improved);
         }
         static bool Finite(double x){return !Double.IsNaN(x)&&!Double.IsInfinity(x);}
     }

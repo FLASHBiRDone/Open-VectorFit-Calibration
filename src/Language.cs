@@ -34,6 +34,9 @@ namespace VectorFit {
             }finally{Applying=previous;}
         }
         static Dictionary<string,string> Build(){var result=new Dictionary<string,string>();
+            result["↑ høyere er bedre · ↓ lavere er bedre · * med bevart treffandel. Bevegelsesmål er medianer; avstand er % av målavstanden."]="↑ higher is better · ↓ lower is better · * with maintained hit rate. Movement measures are medians; distance is % of target distance.";
+            result["kontekst"]="context";
+            result["Tid per mål (inkl. bom; tidsavbrudd = 3000 ms): "]="Time per target (incl. misses; timeout = 3000 ms): ";
             // One phrase per line, separated from its English translation by a tab-like pipe delimiter.
             const string data=@"Bekreftelsesrunden er låst til samme profiltype.|The confirmation run is locked to the same profile type.
 Beregn et forslag før bekreftelsesrunden.|Calculate a proposal before starting confirmation.
@@ -499,7 +502,7 @@ Tidligere oppsett er gjenopprettet.|Previous settings restored.
 Ugyldig kurveprofil|Invalid curve profile
 Ukjent mus|Unknown mouse
 VectorFit kunne ikke starte.|VectorFit could not start.
-Pakk ut hele mappen før du åpner VectorFit.exe.|Extract the entire folder before opening VectorFit.exe.
+Pakk ut hele mappen før du åpner TrueTrack.exe.|Extract the entire folder before opening TrueTrack.exe.
 Driver ikke tilgjengelig|Driver unavailable
 Kalibrering og global profil|Calibration and global profile
 Kalibrering og A/B|Calibration and A/B

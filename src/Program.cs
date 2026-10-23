@@ -32,7 +32,7 @@ namespace VectorFit {
                     using(var f=new CircleForm(new Setup())){if(Array.IndexOf(args,"cw")>=0||Array.IndexOf(args,"ccw")>=0)f.PreviewTransition(Array.IndexOf(args,"cw")>=0);else f.Preview();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render-aim") {
-                    using(var f=new AimForm(new Session(),false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.Preview(true);using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
+                    using(var f=new AimForm(new Session{PrecisionFirst=true},false,true)){if(Array.IndexOf(args,"precision")>=0||Array.IndexOf(args,"instructions")>=0)f.PreviewInstructions(Array.IndexOf(args,"precision")>=0);else f.PreviewRings();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }
                 if(args.Length>1&&args[0]=="--render") {
                     using(var f=new MainForm()){
@@ -52,7 +52,7 @@ namespace VectorFit {
                 Application.Run(new MainForm());return 0;
             }catch(Exception e){
                 if(args.Length>0){File.WriteAllText(Path.Combine(Driver.Root,"startup-error.txt"),e.ToString());return 1;}
-                UiMessage.Show("TrueTrack kunne ikke starte.\n\n"+e.Message+"\n\nPakk ut hele mappen før du åpner VectorFit.exe.","TrueTrack");return 1;
+                UiMessage.Show("TrueTrack kunne ikke starte.\n\n"+e.Message+"\n\nPakk ut hele mappen før du åpner TrueTrack.exe.","TrueTrack");return 1;
             }
         }
     }

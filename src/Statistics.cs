@@ -80,7 +80,7 @@ namespace VectorFit {
         protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);var g=e.Graphics;
             using(var body=new Font("Segoe UI",12,GraphicsUnit.Pixel))using(var bold=new Font("Segoe UI",14,FontStyle.Bold,GraphicsUnit.Pixel))using(var ink=new SolidBrush(Color.FromArgb(237,244,242)))using(var muted=new SolidBrush(Color.FromArgb(169,184,188))){
                 PaintText.Draw(g,"Treff og kontroll gjennom bevegelsen",bold,ink,18,14);
-                string[] names={"Treff ved klikk","Treff etter overskyting","Overskyting før klikk","Etterkorrigering","Tid til første målpassering","Tid etter første bevegelse","Nye passeringer av målet"};
+                string[] names={"Treff ved klikk ↑","Treff etter overskyting · kontekst","Overskyting før klikk ↓","Etterkorrigering ↓","Tid til første målpassering ↓*","Tid etter første bevegelse ↓*","Nye passeringer av målet ↓"};
                 var groups=new[]{stats.Baseline,stats.A,stats.B};string[] headings={"Baseline","A","B"};float start=Width*.40f,column=(Width-start-18)/3;
                 for(int row=0;row<names.Length;row++)PaintText.Draw(g,names[row],body,muted,18,65+row*27);
                 for(int i=0;i<3;i++){
@@ -88,7 +88,7 @@ namespace VectorFit {
                     string[] values=new[]{trials.Count>0&&trials.All(t=>t.Hit.HasValue)?trials.Count(t=>t.Hit==true)+" / "+trials.Count:"—",quality.Any(q=>q.TargetKnown)?quality.Count(q=>q.HitAfterOvershoot).ToString():"—",quality.Count>0?(100*Analysis.Median(quality.Select(q=>q.Overshoot))).ToString("F1")+" %":"—",quality.Count>0?(100*Analysis.Median(quality.Select(q=>q.CorrectionDistance))).ToString("F1")+" %":"—",quality.Any(q=>q.FirstEntryMs.HasValue)?Analysis.Median(quality.Where(q=>q.FirstEntryMs.HasValue).Select(q=>q.FirstEntryMs.Value)).ToString("F0")+" ms":"—",quality.Count>0?Analysis.Median(quality.Select(q=>q.CorrectionMs)).ToString("F0")+" ms":"—",quality.Any(q=>q.TargetKnown)?Analysis.Median(quality.Where(q=>q.TargetKnown).Select(q=>(double)q.Reentries)).ToString("F1"):"—"};
                     for(int row=0;row<values.Length;row++)PaintText.Draw(g,values[row],body,ink,x,65+row*27);
                 }
-                PaintText.Draw(g,"Bevegelsesmål er medianer. Avstander er prosent av målavstanden. Treff etter retur teller fortsatt som treff.",body,muted,new RectangleF(18,261,Width-36,42));
+                PaintText.Draw(g,"↑ høyere er bedre · ↓ lavere er bedre · * med bevart treffandel. Bevegelsesmål er medianer; avstand er % av målavstanden.",body,muted,new RectangleF(18,261,Width-36,42));
             }
         }
     }
@@ -101,7 +101,7 @@ namespace VectorFit {
                 string[] titles={"Klikkavvik","Tid til klikk","Retningsspredning"},units={"pp","ms","pp"};
                 int col=Width/3;
                 for(int m=0;m<3;m++){
-                    int x=m*col+18;g.DrawString(L.T(titles[m]),bold,white,x,15);
+                    int x=m*col+18;g.DrawString(L.T(titles[m]),bold,white,x,15);g.DrawString(DriverSetup.Text("Lavere er bedre*","Lower is better*"),font,gray,x,32);
                     var values=new[]{RoundStatistics.Value(stats.Baseline,m),RoundStatistics.Value(stats.A,m),RoundStatistics.Value(stats.B,m)};
                     double max=Math.Max(1,values.Where(v=>v.HasValue).Select(v=>v.Value).DefaultIfEmpty(1).Max());
                     string[] labels={"Baseline","A","B"};Color[] colors={baseline,aColor,bColor};
@@ -138,6 +138,54 @@ namespace VectorFit {
                 }
                 for(int i=0;i<rounds.Count;i++)if(rounds.Count<=12||i==0||i==rounds.Count-1||i%Math.Max(1,rounds.Count/8)==0)g.DrawString(L.T("Runde ")+rounds[i].Session.Round,font,gray,x(i)-22,189);
                 g.DrawString(L.T("Blå: baseline per runde   ·   Grønn: B-forslag   ·   Stiplet: første baseline   ·   Lavere er bedre"),font,gray,18,218);
+            }
+        }
+    }
+}
+
+namespace VectorFit {
+    public static class FlickScoring {
+        public static int Score(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>5)return 0;return 12-2*Math.Max(1,(int)Math.Ceiling(radii));}
+        public static double? Average(List<Trial> ts){return ts.Count>0&&ts.All(t=>t.FlickScore.HasValue)?(double?)ts.Average(t=>(double)t.FlickScore.Value):null;}
+    }
+    class ConfigGauges:Control {
+        List<Trial> pa,pb,fa,fb;string context;bool comparable;
+        static string T(string nb,string en){return DriverSetup.Text(nb,en);}
+        public ConfigGauges(Session s){
+            Height=436;DoubleBuffered=true;BackColor=Color.FromArgb(28,34,38);
+            fa=s.Validation.Where(t=>!t.Corrected).ToList();fb=s.Validation.Where(t=>t.Corrected).ToList();pa=s.PrecisionValidation.Where(t=>!t.Corrected).ToList();pb=s.PrecisionValidation.Where(t=>t.Corrected).ToList();
+            comparable=fa.Count==fb.Count&&pa.Count==pb.Count&&fa.Count>=16&&pa.Count==16;
+            context=T("Denne profilen (B) mot måleprofilen (A) · samme A/B-test","This config (B) vs previous config (A) · same A/B test");
+            if(fa.Count==0&&fb.Count==0){
+                string note;var history=History.Load(s,Driver.Data,out note);fa=new List<Trial>();pa=new List<Trial>();fb=s.Baseline;pb=s.PrecisionBaseline;
+                if(history.Count>1){var prev=history[history.Count-2].Session;fa=prev.Baseline;pa=prev.PrecisionBaseline;}
+                context=T("Denne rundens måleprofil mot forrige runde · veiledende trend","This round's measured config vs last round · descriptive trend");comparable=false;
+            }
+            AccessibleName=context;
+        }
+        static double? Mean(List<Trial> ts,Func<Trial,double> f){return ts.Count>0?(double?)ts.Average(f):null;}
+        static double? Correction(List<Trial> ts){var qs=ts.Select(Trajectory.Measure).ToList();return qs.Count>0&&qs.All(q=>q.Available)?(double?)qs.Average(q=>100*q.CorrectionDistance):null;}
+        protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);var g=e.Graphics;g.SmoothingMode=SmoothingMode.AntiAlias;
+            using(var title=new Font("Segoe UI",14,FontStyle.Bold,GraphicsUnit.Pixel))using(var body=new Font("Segoe UI",12,GraphicsUnit.Pixel))using(var big=new Font("Segoe UI",23,FontStyle.Bold,GraphicsUnit.Pixel))using(var ink=new SolidBrush(Color.FromArgb(237,244,242)))using(var muted=new SolidBrush(Color.FromArgb(169,184,188))){
+                g.DrawString(context+(comparable?"":T(" · foreløpig"," · provisional")),title,ink,new RectangleF(16,12,Width-32,38));
+                string[] names={T("Presisjon · tid per mål","Precision · time per target"),T("Presisjon · etterkorrigering","Precision · corrective travel"),T("Flick · tid til klikk","Flick · time to click"),T("Flick · poeng per mål","Flick · score per target")};
+                double?[] a={Mean(pa,PrecisionCheck.Time),Correction(pa),Mean(fa,t=>t.TotalMs),FlickScoring.Average(fa)},b={Mean(pb,PrecisionCheck.Time),Correction(pb),Mean(fb,t=>t.TotalMs),FlickScoring.Average(fb)};
+                string[] units={"ms","%","ms","/ 10"};int col=Width/2;
+                for(int i=0;i<4;i++){int x=16+(i%2)*col,y=55+(i/2)*160;float w=col-32;
+                    g.DrawString(names[i],title,ink,x,y);g.DrawString(i==3?T("Høyere er bedre","Higher is better"):T("Lavere er bedre*","Lower is better*"),body,muted,x,y+22);
+                    bool known=a[i].HasValue&&b[i].HasValue;double delta=known?b[i].Value-a[i].Value:0;bool better=i==3?delta>0:delta<0;
+                    bool hitsHeld=i==0?pb.Count>0&&pa.Count>0&&(double)pb.Count(t=>t.Hit==true)/pb.Count>=(double)pa.Count(t=>t.Hit==true)/pa.Count:i==2?fb.Count>0&&fa.Count>0&&(double)fb.Count(t=>t.Hit==true)/fb.Count>=(double)fa.Count(t=>t.Hit==true)/fa.Count:true;
+                    if(!hitsHeld&&better)known=false;
+                    var color=!known||Math.Abs(delta)<.0001?Color.FromArgb(169,184,188):better?Color.FromArgb(109,218,182):Color.FromArgb(244,116,116);
+                    using(var brush=new SolidBrush(color))using(var track=new Pen(Color.FromArgb(65,76,82),9))using(var value=new Pen(color,9)){
+                        var arc=new RectangleF(x+8,y+55,74,74);g.DrawArc(track,arc,180,180);
+                        if(known){double change=a[i]>0?Math.Abs(delta)/a[i].Value:delta==0?0:1;g.DrawArc(value,arc,180,(float)(180*Math.Min(1,change/.25)));}
+                        g.DrawString(known?delta.ToString("+0.0;-0.0;0.0"):"—",big,brush,x+98,y+51);
+                        g.DrawString(known?(better?T("Bedre","Better"):Math.Abs(delta)<.0001?T("Uendret","Unchanged"):T("Dårligere","Worse")):T("Mangler sammenlignbare data","No comparable data"),body,brush,x+98,y+81);
+                    }
+                    g.DrawString((a[i].HasValue?a[i].Value.ToString("F1"):"—")+" → "+(b[i].HasValue?b[i].Value.ToString("F1"):"—")+" "+units[i],body,ink,x,y+122);
+                }
+                g.DrawString(T("* Raskere er bedre bare med bevart treffandel. Tiden inkluderer bom og korrigering; tidsavbrudd teller 3000 ms. Etterkorrigering = ekstra bevegelse etter første flick. Fargene viser målt forskjell, ikke bevis.","* Faster is better only with maintained hit rate. Time includes misses and corrections; timeouts count as 3000 ms. Corrective travel = extra movement after the first flick. Colors describe differences, not proof."),body,muted,new RectangleF(16,376,Width-32,56));
             }
         }
     }

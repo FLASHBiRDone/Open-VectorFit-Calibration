@@ -12,7 +12,7 @@ using Newtonsoft.Json.Linq;
 namespace VectorFit {
     class MainForm:Form {
         Color bg=Color.FromArgb(19,24,27),panel=Color.FromArgb(28,34,38),ink=Color.FromArgb(237,244,242),muted=Color.FromArgb(169,184,188),accent=Color.FromArgb(109,218,182);
-        Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
+        Panel content;Label status;ProgressStrip progress;Button[] nav;Session session=new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true};string activeJson,driverError;bool sensitivityEnabled=true,circleEnabled=true;
         TextBox mouse;NumericUpDown dpi,cm,fov;int pageIndex;bool busy;Setup draft=new Setup();GlobalForm global;
         public MainForm() {
             Text="TrueTrack | Kalibrering og global profil";Icon=Icon.ExtractAssociatedIcon(Application.ExecutablePath);ClientSize=new Size(1120,790);MinimumSize=new Size(1000,740);
@@ -96,7 +96,7 @@ namespace VectorFit {
                     var s=new Setup{Mouse=mouse.Text.Trim(),Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
                     if(!s.Valid()||s.Mouse.Length==0)throw new Exception("Fyll ut museoppsettet først.");
                     if(session.Baseline.Count>0&&UiMessage.Show(this,"Starte en ny måling fra nøytralt oppsett? Bruk Ny runde med aktiv profil på Global profil for å bygge videre.","Ny måling",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;
-                    measured=new Session{GuidedCalibration=true,DualTask=true,Setup=s,Mode=session.Mode,CalibrateSensitivity=sensitivityEnabled};
+                    measured=new Session{PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Setup=s,Mode=session.Mode,CalibrateSensitivity=sensitivityEnabled};
                 }
             }else if(!session.FitReady)throw new Exception("Fullfør kalibreringen slik at en profil kan beregnes først.");
             RefreshDriver();
@@ -123,7 +123,7 @@ namespace VectorFit {
                 using(var result=new CircleResultForm(session.Circles,session.InputCorrection)){if(result.ShowDialog(this)!=DialogResult.OK){ShowPage(3);return;}}
                 VerifyDriver(fingerprint);
             }
-            var testSettings=ab?new Session{FrozenProposal=session.FrozenProposal,TestInputCorrection=candidateActive?session.Correction:session.InputCorrection,DualTask=true,Setup=session.Setup,Mode=session.Mode,Round=session.Round,Correction=session.Correction,Curve=session.Curve,InputCorrection=session.InputCorrection,FitReady=session.FitReady,Repeatable=session.Repeatable,AdaptiveValidation=true,TrajectoryFitting=session.TrajectoryFitting,AdaptiveCalibration=session.AdaptiveCalibration}:session;
+            var testSettings=ab?new Session{PrecisionFirst=session.PrecisionFirst,FrozenProposal=session.FrozenProposal,TestInputCorrection=candidateActive?session.Correction:session.InputCorrection,DualTask=true,Setup=session.Setup,Mode=session.Mode,Round=session.Round,Correction=session.Correction,Curve=session.Curve,InputCorrection=session.InputCorrection,FitReady=session.FitReady,Repeatable=session.Repeatable,AdaptiveValidation=true,TrajectoryFitting=session.TrajectoryFitting,AdaptiveCalibration=session.AdaptiveCalibration}:session;
             using(var form=new AimForm(testSettings,ab,!ab,circlesComplete)) {
                 form.ShowDialog(this);
                 VerifyDriver(fingerprint);
@@ -202,6 +202,7 @@ namespace VectorFit {
             Add(stack,TextLabel("Baseline er målingen før A/B. A er profilen du målte med; B er forslaget. Negative differanser betyr lavere avvik eller kortere tid. Avvik vises som prosent av målavstanden.",11,false,48));
             Add(stack,ProfileSelector());
             var counts=new RoundStatistics(session);Add(stack,TextLabel("Baseline: "+counts.Baseline.Count+"  ·  A: "+counts.A.Count+" / "+session.ComparisonGoal/2+"  ·  B: "+counts.B.Count+" / "+session.ComparisonGoal/2,10,false,24));
+            Add(stack,new ConfigGauges(session));
             Add(stack,new ComparisonChart(session));
             Add(stack,new MovementChart(session));
             if(session.AdaptiveValidation)Add(stack,TextLabel("A/B inkluderer bom, klikk uten bevegelse og tidsavbrudd. Ugyldige forsøk teller som bom med minst 100 % avvik. Ukjente bevegelsesmål vises som —.",10,false,42));
@@ -220,6 +221,7 @@ namespace VectorFit {
             Add(stack,TextLabel(session.FitReady?"Fase "+session.Round+" · "+(session.Round==1?"Baseline analysert":"Måling analysert"):"Datainnhenting · ingen ferdig profil ennå",22,true,43));
             Add(stack,TextLabel(session.Baseline.Count==0?"Kalibrer musen først. Her ser du målingene og kan teste korreksjonen før den brukes utenfor programmet.":session.Validation.Count>0?"Resultatet gjelder dette profilparet. Ingen innstillinger endres når du leser analysen.":session.Notes,11,false,50));
             if(session.Baseline.Count==0){if(CanResumeCircles)Add(stack,Button("Fortsett til måltest",delegate{Start(false,false,false,true);},240,true));else Add(stack,Button("Gå til kalibrering",delegate{ShowPage(0);},230,true));return;}
+            Add(stack,new ConfigGauges(session));
             if(session.Validation.Count>0||session.FrozenProposal){
                 Add(stack,TextLabel(ResultStory.Headline(session),18,true,56));
                 Add(stack,TextLabel("A = måleprofilen. B = samme forslag. Tallene nedenfor er A → B; tidene er medianer.",10,false,36));
@@ -298,6 +300,7 @@ namespace VectorFit {
             if(!curved)AddDetails(stack,"Valg for neste runde",SensitivityChoice(),CircleChoice());
             string driver=activeJson==null?"Raw Accel kunne ikke leses.":Driver.Neutral(activeJson)?"Raw Accel er tilgjengelig og nøytral.":"Raw Accel har en aktiv profil.";
             Add(stack,TextLabel(driver,11,false,40));
+            if(!curved&&activeJson!=null&&session.CanTryRawAccel)Add(stack,TextLabel(Driver.MatchesCorrection(activeJson,session.Correction)?DriverSetup.Text("Valgt forslag er aktivt i Raw Accel · lest tilbake og kontrollert. Gjelder også rå museinput; kompatibilitet må vurderes per spill.","Selected proposal is active in Raw Accel · read back and verified. Applies to raw mouse input; check compatibility per game."):DriverSetup.Text("Det valgte forslaget er ikke aktivt i driveren. Trykk Aktiver med Raw Accel for å bruke det.","The selected proposal is not active in the driver. Choose Activate with Raw Accel to apply it."),11,false,48));
             var recovery=new FlowLayoutPanel{Height=52};
             recovery.Controls.Add(Button(DriverSetup.Text("Tilbakestill til nøytral","Reset to neutral"),Neutralize,230));
             recovery.Controls.Add(Button("Gjenopprett profil",Restore,210));
