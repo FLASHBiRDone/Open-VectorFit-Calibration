@@ -1,12 +1,12 @@
-﻿# TrueTrack
+# TrueTrack
 
 <img src="src/assets/truetrack.png" alt="TrueTrack logo" width="96">
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.17.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.17.0/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.18.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.18.0/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.17.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.17.0) · [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.18.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.18.0) · [Roadmap](ROADMAP.md)
 
 Extract the entire ZIP, open the **TrueTrack** folder and run **TrueTrack.exe**. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
@@ -82,3 +82,9 @@ Original project code is offered under the MIT license; see LICENSE. Third-party
 The working name and implementation have not received trademark or patent clearance. MIT licensing does not grant rights owned by unrelated third parties.
 
 
+
+
+### Updates and personal data
+From v0.18.0, measurements and profiles are stored in `%LOCALAPPDATA%\TrueTrack\profiles`. Existing files next to the app are copied there on first launch; originals are retained. Keep the complete old folder until you have checked your history. Conflicting imports are retained in `import-conflicts`.
+
+Use **History / updates → Check for updates**. Startup checks are optional. Accepting an update closes the app, verifies the release checksum and replaces program files while retaining your data. Experimental releases are included. No driver installation or profile activation happens during an app update. Older versions need one manual download first. The app and updater remain unsigned.

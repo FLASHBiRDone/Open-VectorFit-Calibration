@@ -25,14 +25,14 @@ namespace VectorFit {
             var language=new ComboBox{DropDownStyle=ComboBoxStyle.DropDownList,Width=140,Location=new Point(900,10),Anchor=AnchorStyles.Top|AnchorStyles.Right,BackColor=panel,ForeColor=ink,AccessibleName="Language / Språk",Tag="language"};
             language.Items.AddRange(new object[]{"Norsk","English"});language.SelectedIndex=L.English?1:0;head.Controls.Add(language);
             language.SelectedIndexChanged+=delegate{Guard(delegate{L.English=language.SelectedIndex==1;L.Save();ShowPage(pageIndex);if(global!=null&&!global.IsDisposed)L.Controls(global);});};
-            var tabs=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false};nav=new Button[4];
-            string[] names={"Kalibrer","Resultat","Bruk i Windows og spill","Statistikk"};
-            for(int i=0;i<nav.Length;i++){int n=i;nav[i]=Button(names[i],delegate{ShowPage(n);},195);tabs.Controls.Add(nav[i]);}root.Controls.Add(tabs,0,1);
+            var tabs=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false};nav=new Button[5];
+            string[] names={"Kalibrer","Resultat",DriverSetup.Text("Windows / spill","Windows / games"),"Statistikk",DriverSetup.Text("Historikk / oppdatering","History / updates")};
+            for(int i=0;i<nav.Length;i++){int n=i;nav[i]=Button(names[i],delegate{ShowPage(n);},175);tabs.Controls.Add(nav[i]);}root.Controls.Add(tabs,0,1);
             content=new Panel{Dock=DockStyle.Fill,Padding=new Padding(0,16,0,0)};root.Controls.Add(content,0,2);
             var footer=new TableLayoutPanel{Dock=DockStyle.Fill,RowCount=2,ColumnCount=1,Margin=new Padding(0)};footer.RowStyles.Add(new RowStyle(SizeType.Absolute,5));footer.RowStyles.Add(new RowStyle(SizeType.Percent,100));
             progress=new ProgressStrip{Dock=DockStyle.Fill,Maximum=144,Margin=new Padding(0)};footer.Controls.Add(progress,0,0);
             status=new Label{Dock=DockStyle.Fill,TextAlign=ContentAlignment.BottomLeft,ForeColor=muted,Font=new Font("Segoe UI",12,FontStyle.Regular,GraphicsUnit.Pixel)};footer.Controls.Add(status,0,1);root.Controls.Add(footer,0,3);
-            FormClosing+=delegate{if(global!=null&&!global.IsDisposed)global.Close();};RefreshDriver();ShowPage(0);
+            FormClosing+=delegate{if(global!=null&&!global.IsDisposed)global.Close();};RefreshDriver();ShowPage(0);Shown+=delegate{if(AppUpdates.Enabled)AppUpdates.Check(this,true);};
         }
         Button Button(string text,Action action,int width=230,bool primary=false) {
             var b=new Button{Text=text,Width=width,Height=40,FlatStyle=FlatStyle.Flat,BackColor=primary?accent:panel,ForeColor=primary?bg:ink,Margin=new Padding(0,0,10,10),Cursor=Cursors.Hand};
@@ -47,7 +47,7 @@ namespace VectorFit {
         void ShowPage(int index) {
             if(pageIndex==0&&mouse!=null&&!mouse.IsDisposed)draft=new Setup{Mouse=mouse.Text,Dpi=(double)dpi.Value,Cm360=(double)cm.Value,Hfov=(double)fov.Value};
             pageIndex=index;foreach(Control old in content.Controls.Cast<Control>().ToArray())old.Dispose();for(int i=0;i<nav.Length;i++){nav[i].BackColor=i==index?accent:panel;nav[i].ForeColor=i==index?bg:ink;}
-            if(index==0)SetupPage();else if(index==1)ResultPage();else if(index==2)DriverPage();else StatisticsPage();
+            if(index==0)SetupPage();else if(index==1)ResultPage();else if(index==2)DriverPage();else if(index==3)StatisticsPage();else HistoryPage();
             UpdateProgress();L.Controls(this);
         }
 #if DEVELOPMENT
@@ -195,6 +195,39 @@ namespace VectorFit {
             outer.SizeChanged+=delegate{toggle.Width=outer.Width;body.Width=outer.Width;foreach(Control control in body.Controls)control.Width=body.ClientSize.Width;};
             toggle.Click+=delegate{body.Visible=!body.Visible;outer.Height=body.Visible?height+52:44;L.SetText(toggle,(body.Visible?"− ":"+ ")+title);};Add(stack,outer);
         }
+
+        void HistoryPage(){
+            var stack=Stack();content.Controls.Add(stack);
+            Add(stack,TextLabel(DriverSetup.Text("Profilhistorikk og oppdateringer","Profile history and updates"),22,true,43));
+            Add(stack,TextLabel(DriverSetup.Text("Åpne en måling endrer ikke den aktive profilen. Tilbakeføring endrer Raw Accel globalt etter bekreftelse.","Opening a measurement does not change the active profile. Restore changes Raw Accel globally after confirmation."),11,false,52));
+            RefreshDriver();
+            Add(stack,TextLabel(activeJson==null?DriverSetup.Text("Driverstatus utilgjengelig","Driver status unavailable"):DriverSetup.Text("Aktiv i Windows: ","Active in Windows: ")+(Driver.MatchesCorrection(activeJson,session.Correction)?DriverSetup.Text("valgt forslag","selected proposal"):Driver.MatchesCorrection(activeJson,session.InputCorrection)?DriverSetup.Text("måleprofil A","measurement profile A"):Driver.Neutral(activeJson)?DriverSetup.Text("nøytral","neutral"):DriverSetup.Text("annet oppsett","other configuration")),12,true,35));
+            var recover=new FlowLayoutPanel{Height=100};
+            recover.Controls.Add(Button(DriverSetup.Text("Tilbake til måleprofil A","Restore measurement profile A"),delegate{RestoreCorrection(session.InputCorrection);},310));
+            if(session.InitialBaseline!=null)recover.Controls.Add(Button(DriverSetup.Text("Tilbake til første baseline","Restore first baseline profile"),delegate{RestoreCorrection(session.InitialBaseline.Input);},310));
+            recover.Controls.Add(Button(DriverSetup.Text("Gjenopprett siste sikkerhetskopi","Restore last driver backup"),Restore,310));
+            recover.Controls.Add(Button(DriverSetup.Text("Nøytral profil","Neutral profile"),Neutralize,240));Add(stack,recover);
+            Add(stack,TextLabel(DriverSetup.Text("Lagrede målinger · nyeste først","Saved measurements · newest first"),16,true,32));
+            int skipped=0;
+            foreach(string path in Directory.GetFiles(Driver.Data,"*.vectorfit.json").OrderByDescending(File.GetLastWriteTimeUtc)){
+                Session saved;try{if(new FileInfo(path).Length>128*1024*1024){skipped++;continue;}saved=Session.FromJson(File.ReadAllText(path));}catch{skipped++;continue;}
+                var row=new Panel{Height=116};var label=TextLabel(DateTime.Parse(saved.CreatedUtc).ToLocalTime().ToString("g")+" · "+DriverSetup.Text("Fase ","Phase ")+saved.Round+" · "+saved.Setup.Mouse+"\n"+ResultStory.SimpleVerdict(saved)+"\n"+ProfileValues(saved.InputCorrection)+" → "+ProfileValues(saved.Correction),10,false,68);row.Controls.Add(label);
+                var open=Button(DriverSetup.Text("Åpne resultat","Open result"),delegate{EnsureFilterStopped();session=saved;ShowPage(1);},190);open.Location=new Point(0,72);row.Controls.Add(open);
+                var restore=Button(DriverSetup.Text("Gjenopprett måleprofil","Restore measured profile"),delegate{RestoreCorrection(saved.InputCorrection);},290);restore.Location=new Point(205,72);row.Controls.Add(restore);Add(stack,row);
+            }
+            if(skipped>0)Add(stack,TextLabel(skipped+DriverSetup.Text(" filer kunne ikke leses; originalene er beholdt."," files could not be read; originals are preserved."),10,false,35));
+            var updates=new FlowLayoutPanel{Height=100};updates.Controls.Add(Button(DriverSetup.Text("Se etter oppdatering","Check for updates"),delegate{EnsureFilterStopped();AppUpdates.Check(this,false);},260));
+            updates.Controls.Add(Button(DriverSetup.Text("Åpne prosjektsiden","Open project page"),delegate{Process.Start("https://github.com/FLASHBiRDone/TrueTrack");},240));
+            updates.Controls.Add(Button(DriverSetup.Text("Åpne datamappen","Open data folder"),delegate{Process.Start(Driver.Data);},240));Add(stack,updates);
+            var check=new CheckBox{Text=DriverSetup.Text("Sjekk GitHub ved oppstart (inkluderer eksperimentelle utgaver)","Check GitHub on startup (includes experimental releases)"),Checked=AppUpdates.Enabled,Height=32,AutoSize=false};check.CheckedChanged+=delegate{AppUpdates.Enabled=check.Checked;};Add(stack,check);
+            Add(stack,TextLabel("TrueTrack "+AppUpdates.Version+"\n"+DriverSetup.Text("Målinger og profiler lagres separat fra programmet: ","Measurements and profiles are stored separately from the app: ")+Driver.Data,10,false,60));
+        }
+        static string ProfileValues(Correction c){return "Sens "+c.Sensitivity.ToString("F3")+" · L/R "+c.Left.ToString("F3")+"/"+c.Right.ToString("F3")+" · U/D "+c.Up.ToString("F3")+"/"+c.Down.ToString("F3");}
+        void RestoreCorrection(Correction c){
+            EnsureFilterStopped();if(!c.Safe())throw new Exception("Invalid profile");
+            if(UiMessage.Show(this,DriverSetup.Text("Aktiver denne Raw Accel-profilen i Windows og spill? Nåværende oppsett sikkerhetskopieres.\n","Activate this Raw Accel profile in Windows and games? Current settings will be backed up.\n")+ProfileValues(c),"TrueTrack",MessageBoxButtons.YesNo)!=DialogResult.Yes)return;
+            string path=Path.Combine(Driver.Data,"restore-selected.rawaccel.json");File.WriteAllText(path,Driver.Config(c).ToString());Driver.Apply(path,true);RefreshDriver();if(!Driver.MatchesCorrection(activeJson,c))throw new Exception("Restored profile could not be verified");ShowPage(4);
+        }
         void StatisticsPage(){
             var stack=Stack();content.Controls.Add(stack);
             Add(stack,TextLabel("Statistikk · runde "+session.Round,22,true,43));
@@ -205,7 +238,9 @@ namespace VectorFit {
             var counts=new RoundStatistics(session);Add(stack,TextLabel("Baseline: "+counts.Baseline.Count+"  ·  A: "+counts.A.Count+" / "+session.ComparisonGoal/2+"  ·  B: "+counts.B.Count+" / "+session.ComparisonGoal/2,10,false,24));
             Add(stack,TextLabel(ResultStory.SimpleVerdict(session),20,true,60));
             Add(stack,TextLabel(ResultStory.SimpleSummary(session),11,false,110));
+            Add(stack,new OutcomeTimeline(session));
             Add(stack,new ConfigGauges(session));
+            AddDetails(stack,DriverSetup.Text("Retningskart","Direction map"),new DirectionMap(session));
             AddDetails(stack,DriverSetup.Text("Utvikling fra første baseline","Progress from first baseline"),new ConfigGauges(session,true));
             Add(stack,new ComparisonChart(session));
             Add(stack,new MovementChart(session));
@@ -244,7 +279,9 @@ namespace VectorFit {
             if(session.Baseline.Count==0){if(CanResumeCircles)Add(stack,Button("Fortsett til måltest",delegate{Start(false,false,false,true);},240,true));else Add(stack,Button("Gå til kalibrering",delegate{ShowPage(0);},230,true));return;}
             Add(stack,TextLabel(ResultStory.SimpleVerdict(session),20,true,60));
             Add(stack,TextLabel(ResultStory.SimpleSummary(session),11,false,110));
+            Add(stack,new OutcomeTimeline(session));
             Add(stack,new ConfigGauges(session));
+            AddDetails(stack,DriverSetup.Text("Retningskart","Direction map"),new DirectionMap(session));
             AddDetails(stack,DriverSetup.Text("Utvikling fra første baseline","Progress from first baseline"),new ConfigGauges(session,true));
             if(session.Validation.Count>0||session.FrozenProposal){
                 var confirm=Button(session.Validation.Count>0?"Bekreft samme forslag på nytt":"Start bekreftelsesrunden",ConfirmProposal,350,true);confirm.Enabled=session.FitReady;Add(stack,confirm);

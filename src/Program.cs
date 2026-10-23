@@ -11,10 +11,15 @@ namespace VectorFit {
                 if(args.Length>2&&args[0]=="--audit")return Tests.Audit(args[1],args[2]);
                 if(args.Length>0&&args[0]=="--selftest")return Tests.Run(args.Length>1?args[1]:Path.Combine(Driver.Root,"test-results.txt"));
 #endif
+#if !DEVELOPMENT
+                UserStorage.Initialize();
+#endif
                 L.Load();
                 Native.SetProcessDPIAware();Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
 #if DEVELOPMENT
                 if(Array.IndexOf(args,"en")>=0)L.English=true;
+                if(args.Length>2&&args[0]=="--render-map") {var session=Session.FromJson(File.ReadAllText(args[2]));using(var map=new DirectionMap(session)){map.Width=950;using(var bmp=new Bitmap(map.Width,map.Height)){map.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;}
+
                 if(args.Length>1&&args[0]=="--render-game-setup"){
                     using(var f=new GameSetupForm(new Setup(),delegate{})){f.StartPosition=FormStartPosition.Manual;f.Location=new Point(-20000,-20000);f.ShowInTaskbar=false;f.Show();Application.DoEvents();using(var bmp=new Bitmap(f.Width,f.Height)){f.DrawToBitmap(bmp,new Rectangle(Point.Empty,bmp.Size));bmp.Save(args[1]);}}return 0;
                 }

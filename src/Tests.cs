@@ -31,6 +31,16 @@ namespace VectorFit {
         public static int Run(string path) {
             log=new List<string>();checks=0;
             try{
+                Check(AppUpdates.Newer("v0.19.0")&&!AppUpdates.Newer("v0.18.0")&&!AppUpdates.Newer("invalid"),"Update version comparison rejects equal and invalid versions");
+                Check(!OutcomeTimeline.Rate(new Trial[0]).HasValue,"Empty hit percentage is unknown");
+                Check(OutcomeTimeline.Rate(new[]{new Trial{Hit=true},new Trial{Hit=false}})==50,"Hit percentage includes misses");
+                Check(!OutcomeTimeline.Rate(new[]{new Trial()}).HasValue,"Legacy unknown hits are not zero percent");
+                string storageTest=Path.Combine(Path.GetTempPath(),"TrueTrack-storage-test-"+Guid.NewGuid().ToString("N"));
+                string oldStore=Path.Combine(storageTest,"old"),newStore=Path.Combine(storageTest,"new");Directory.CreateDirectory(oldStore);Directory.CreateDirectory(newStore);
+                File.WriteAllText(Path.Combine(oldStore,"measurement.json"),"original");File.WriteAllText(Path.Combine(newStore,"measurement.json"),"newer");File.WriteAllText(Path.Combine(oldStore,"language.txt"),"en");
+                UserStorage.Merge(oldStore,newStore);UserStorage.Merge(oldStore,newStore);
+                Check(File.ReadAllText(Path.Combine(newStore,"measurement.json"))=="newer"&&File.ReadAllText(Path.Combine(oldStore,"measurement.json"))=="original","Migration does not overwrite either source or destination");
+                Check(Directory.GetFiles(Path.Combine(newStore,"import-conflicts")).Length==1&&File.ReadAllText(Path.Combine(newStore,"language.txt"))=="en","Migration preserves conflicts and is idempotent");
                 Check(Math.Abs(new Setup{Dpi=800,Cm360=40}.DegreesPerCount-.028575)<1e-9,"DPI/cm360 conversion");
                 Check(Math.Abs(GameMath.Distance(16000,1600)-25.4)<1e-9,"Blind distance converts counts using DPI");
                 Check(Math.Abs(GameMath.Distance(-16000,1600)-25.4)<1e-9,"Blind distance accepts either horizontal direction");
