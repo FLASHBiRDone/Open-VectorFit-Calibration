@@ -22,6 +22,36 @@ The app supports English (first-launch default) and Norwegian; saved language ch
 
 Select **3D arena (optional)** before starting a new baseline. The stationary room follows your mouse-driven camera, with a central crosshair, mint scoring targets and a clear task/progress display. Both A/B profiles use the same environment. Arena measurements stay separate from classic-view history; subsequent and confirmation rounds preserve the selected view.
 
+## See how it works
+
+These app previews illustrate the interface, not measured performance gains. They contain no personal measurement results.
+
+### 1. Set up your game, or keep the defaults
+
+DPI, physical sensitivity (cm/360) and field of view are optional setup steps. Defaults are starting points, not a promise of optimal settings.
+
+![Optional game setup with DPI, cm/360 and horizontal FOV](docs/screenshots/game-setup.png)
+
+### 2. Measure flicks
+
+Click once per target. Misses count, and the scoring rings distinguish a near miss from a distant one. The optional arena adds visual depth while retaining the same comparison rules.
+
+![Flick task in the optional 3D arena with scoring rings](docs/screenshots/flick-arena.png)
+
+### 3. Measure precise hits
+
+Each part starts with instructions. In precision trials, correct a miss and try the same target again; the clock keeps running. Then compare the proposal with your baseline and repeat it to check whether an apparent benefit holds up.
+
+![Precision instructions explaining that misses keep the clock running](docs/screenshots/precision-instructions.png)
+
+## Planned experiment: correcting unwanted movement curves
+
+**Not implemented or available yet.** We want to investigate whether repeated, consistent curved deviations in mouse movement can be distinguished from intentional motion and reduced with an optional correction. The intended focus is a recurring personal tendency, not every small variation.
+
+Current movement-path analysis and sensitivity/axis adjustments do **not** establish that TrueTrack can straighten an arbitrary movement in real time. The proposed feature would need repeated comparisons showing fewer corrective movements without slower hits or worse accuracy, including checks that intentional curves remain usable. Global integration is undecided; Raw Accel support alone does not imply support for this future correction.
+
+This is a research direction, not a promised benefit or release date. See the [roadmap](ROADMAP.md).
+
 ## Help shape the aim trainer
 
 See the [roadmap](ROADMAP.md) for the proposed path from calibration to broader aim training: reliable onboarding, tracking and target-switching exercises, practice routines, and local progress history.
@@ -47,6 +77,8 @@ In-app comparisons work locally. Applying a profile across Windows and games req
 Optional circle calibration records 30 natural rotations in each direction. Move naturally rather than trying to draw perfect circles. It estimates consistent shape tendencies; a rounder simulated circle alone does not establish better aim.
 
 ## What the results mean
+
+Read the [research and game-configuration notes](docs/RESEARCH.md) for the evidence behind repeated comparisons and the difference between matching cm/360 and matching FOV.
 
 - **Promising**: descriptive improvements appeared, but the acceptance checks have not established an improvement.
 - **Closer but slower**: lower aiming error came with increased time.

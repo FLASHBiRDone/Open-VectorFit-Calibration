@@ -1,6 +1,6 @@
 # Roadmap: a free, open-source aim trainer
 
-Our goal is to grow Open VectorFit Calibration into a free, open-source aim-training platform for Windows, designed for standard mice across brands.
+Our goal is to grow TrueTrack into a free, open-source aim-training platform for Windows, designed for standard mice across brands.
 
 This is a direction for development, not a delivery schedule. Planned features are not available until implemented and tested. Priorities may change with community feedback. The current release is an experimental calibration and aim-testing tool, not a full replacement for Aimlabs.
 
@@ -58,6 +58,18 @@ Training exercises should work without a global input driver. Driver-based calib
 - [ ] Expand accessibility and community translations.
 
 **Milestone:** contributors can create and share exercises without modifying the core calibration code.
+
+## Research proposal: unwanted movement curves
+
+**Planned, experimental and not implemented.** Investigate correction of repeatable curved deviations in a user's movement, while preserving deliberate curves and ordinary variation.
+
+- [ ] Establish whether a consistent tendency repeats across directions, speeds and sessions.
+- [ ] Test whether it can be distinguished from deliberate curved motion without knowing an in-game target.
+- [ ] Prototype optional correction in the local test environment, with a clear neutral reset.
+- [ ] Compare unchanged and corrected input in repeated blind tests: corrective travel, time to hit and accuracy must be considered together.
+- [ ] Assess global input integration separately; do not assume an existing driver can express the correction.
+
+Existing path analysis and sensitivity/axis calibration are not this proposed real-time feature. No effectiveness or delivery date is established. The current algorithm remains documented separately in [ALGORITHM.md](ALGORITHM.md).
 
 ## Principles
 
