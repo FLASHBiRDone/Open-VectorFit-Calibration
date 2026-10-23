@@ -4,17 +4,17 @@
 
 **Free, open-source mouse calibration and aim testing for Windows.**
 
-[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.14.0-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.0/TrueTrack-Windows.zip)
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-v0.14.1-168A66?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.1/TrueTrack-Windows.zip)
 
-**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.0/TrueTrack-Windows.zip)** · [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.14.0) · [Roadmap](ROADMAP.md)
+**[Download the Windows ZIP](https://github.com/FLASHBiRDone/TrueTrack/releases/download/v0.14.1/TrueTrack-Windows.zip)** Â· [Release notes and checksums](https://github.com/FLASHBiRDone/TrueTrack/releases/tag/v0.14.1) Â· [Roadmap](ROADMAP.md)
 
-Extract the entire ZIP, open the **VectorFit** folder and run **VectorFit.exe**. The executable keeps its legacy filename for compatibility. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
+Extract the entire ZIP, open the **TrueTrack** folder and run **VectorFit.exe**. The executable keeps its legacy filename for compatibility. No build required. Windows x64 and .NET Framework 4.7.2 or later are required. The application is unsigned; Windows may show a reputation warning.
 
 Measure your flicks and precision, compare sensitivity profiles, and check whether changes help without simply taking longer. Designed for standard mice across brands.
 
 **Available now:** calibration, A/B testing, repeat confirmation, optional game setup with FOV and preferred cm/360, blind distance estimation, and optional global profiles.
 
-Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimental—not yet a full Aimlabs replacement. Testers and contributors are welcome.
+Our long-term goal is a free, open-source aim-training platform shaped by its community. The current release is experimentalâ€”not yet a full Aimlabs replacement. Testers and contributors are welcome.
 
 The app supports English and Norwegian. Calibration and local comparisons do not require installing an input driver. Global profiles use optional drivers with separate setup and compatibility considerations.
 
@@ -28,7 +28,7 @@ See the [roadmap](ROADMAP.md) for the proposed path from calibration to broader 
 
 Calibration is designed to work with any standard mouse that Windows exposes as mouse input, including wired and wireless mice. No Corsair, Logitech or other manufacturer-specific hardware is required. Every mouse model has not been tested.
 
-In-app comparisons work locally. Applying a profile across Windows and games requires a compatible, separately installed input driver. Device support, game input paths and anti-cheat restrictions can affect global operation. The tool does not write calibration to mouse firmware.
+In-app comparisons work locally. Applying a profile across Windows and games requires a compatible input driver, installed through the optional built-in setup. Device support, game input paths and anti-cheat restrictions can affect global operation. The tool does not write calibration to mouse firmware.
 
 ## How to use it
 
@@ -67,7 +67,7 @@ Optional tests of historical local measurements are skipped when those private f
 
 ## Global input
 
-Raw Accel integration requires its separately installed driver. Open **Use in Windows and games → Set up Raw Accel** to install the bundled official driver. If the package is missing, setup downloads the fixed official release. Its SHA-256 is checked before extraction. Installation requires your choice and Windows administrator approval; restart and check status afterwards. No profile is activated by installation. Applying a global profile is an explicit action with backup and readback. **Reset to neutral** disables adjustments; **Restore profile** retrieves the last backup. This does not program mouse firmware.
+Raw Accel integration requires its separately installed driver. Open **Use in Windows and games â†’ Set up Raw Accel** to install the bundled official driver. If the package is missing, setup downloads the fixed official release. Its SHA-256 is checked before extraction. Installation requires your choice and Windows administrator approval; restart and check status afterwards. No profile is activated by installation. Applying a global profile is an explicit action with backup and readback. **Reset to neutral** disables adjustments; **Restore profile** retrieves the last backup. This does not program mouse firmware.
 
 Interception is an optional experimental backend with separate licensing. **Optional: Interception setup** explains the license and anti-cheat risks, then lets you choose an official download and installation or uninstallation. Its binaries are not included in the repository. Check upstream terms for your intended use, particularly commercial use. Stopping the filter does not uninstall the driver. Check the rules and compatibility of each game's anti-cheat before using any input driver; compatibility is not guaranteed.
 

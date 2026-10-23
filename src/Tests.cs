@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -196,8 +196,8 @@ namespace VectorFit {
                     Check(!button.Enabled,"Missing computed profile still blocks A/B preview");
                     typeof(MainForm).GetMethod("ShowPage",flags).Invoke(main,new object[]{2});
                     var selector=descendants(main).OfType<System.Windows.Forms.ComboBox>().Single(b=>(string)b.Tag!="language");
-                    Check(selector.SelectedIndex==0&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Aktiver med Raw Accel"),"Global page defaults to the direct Raw Accel route");
-                    Check(descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Sett opp Raw Accel"),"Missing driver has an explicit setup route");
+                    Check(selector.SelectedIndex==0&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Aktiver med Raw Accel"||b.Text=="Klargjør global bruk"),"Global page defaults to the direct Raw Accel route");
+                    Check(descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Klargjør global bruk"&&b.Enabled),"Missing driver has an explicit setup route");
                     selector.SelectedIndex=1;
                     Check(preview.UsesInterception&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Åpne Interception-valg"),"UI explicitly selects the separate Interception route");
                     descendants(main).OfType<System.Windows.Forms.ComboBox>().Single(b=>(string)b.Tag!="language").SelectedIndex=0;

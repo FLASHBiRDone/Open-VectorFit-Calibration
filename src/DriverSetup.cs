@@ -54,16 +54,17 @@ namespace VectorFit {
         readonly Button remove=new Button{Width=310,Height=38};
         readonly CheckBox acknowledge=new CheckBox{Width=650,Height=55};
         bool working;
+        bool rawReady, rawRegistered;
         static string T(string n,string e){return DriverSetup.Text(n,e);}
         public DriverSetupForm(bool optional){
-            interception=optional;Text=optional?"Interception · "+T("valgfritt oppsett","optional setup"):"Raw Accel · "+T("enkelt oppsett","easy setup");
-            ClientSize=new System.Drawing.Size(700,590);StartPosition=FormStartPosition.CenterParent;
+            interception=optional;Text=optional?"Interception · "+T("valgfritt oppsett","optional setup"):"Raw Accel · "+T("global bruk","global use");
+            ClientSize=new System.Drawing.Size(700,650);StartPosition=FormStartPosition.CenterParent;
             var panel=new FlowLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(20),FlowDirection=FlowDirection.TopDown,WrapContents=false,AutoScroll=true};Controls.Add(panel);
-            panel.Controls.Add(new Label{Width=650,Height=95,Text=optional?
+            panel.Controls.Add(new Label{Width=650,Height=145,Text=optional?
                 T("Eksperimentell kurvekorreksjon. VectorFit må kjøre, og Raw Accel må være nøytral. Ctrl+Alt+F12 stopper korreksjonen, men avinstallerer ikke driveren. Anti-cheat kan blokkere også en installert driver som ikke brukes.",
                   "Experimental curve correction. VectorFit must stay running and Raw Accel must be neutral. Ctrl+Alt+F12 stops correction but does not uninstall the driver. Anti-cheat may block even an installed driver that is not in use."):
-                T("1. Installer den offisielle Raw Accel-driveren.\n2. Start Windows på nytt og åpne VectorFit.\n3. Åpne målingen og velg Aktiver med Raw Accel.\nTilbakestill til nøytral slår av justeringene uten å avinstallere.",
-                  "1. Install the official Raw Accel driver.\n2. Restart Windows and reopen VectorFit.\n3. Open your measurement and choose Activate with Raw Accel.\nReset to neutral turns adjustments off without uninstalling.")});
+                T("Alt du trenger følger med TrueTrack. Du trenger ikke laste ned eller konfigurere Raw Accel selv.\n1. Trykk Installer driver og godkjenn Windows-spørsmålet.\n2. Start Windows på nytt ved behov, og åpne TrueTrack igjen.\n3. Åpne målingen og trykk Aktiver med Raw Accel.",
+                  "Everything you need is included with TrueTrack. No separate Raw Accel download or manual configuration is needed.\n1. Click Install driver and approve the Windows prompt.\n2. Restart Windows if needed, then reopen TrueTrack.\n3. Open your measurement and click Activate with Raw Accel.")});
             panel.Controls.Add(new Label{Width=650,Height=100,Text=optional?
                 T("Interception har egen lisens: oppstrøms oppgir LGPL og særvilkår for ikke-kommersiell distribusjon, samt egne kommersielle lisenser. VectorFits MIT-lisens dekker ikke Interception. Du må avklare vilkårene for din bruk. Vi tilbyr ingen anti-cheat-garanti.",
                   "Interception has its own license: upstream specifies LGPL and conditions for non-commercial distribution, plus separate commercial licenses. VectorFit's MIT license does not cover Interception. Check the terms for your use. We offer no anti-cheat guarantee."):
@@ -72,23 +73,24 @@ namespace VectorFit {
             var link=new LinkLabel{Width=650,Height=30,Text=T("Les lisens og offisiell dokumentasjon","Read license and official documentation")};
             link.LinkClicked+=delegate{Process.Start(new ProcessStartInfo(optional?"https://github.com/oblitum/Interception#license":"https://github.com/RawAccelOfficial/rawaccel"){UseShellExecute=true});};panel.Controls.Add(link);
             acknowledge.Text=T("Jeg har lest informasjonen og vil selv velge installasjon.","I have read the information and want to choose installation myself.");
-            acknowledge.CheckedChanged+=delegate{UpdateButtons();};panel.Controls.Add(acknowledge);
-            install.Text=optional?T("Last ned og installer","Download and install"):T("Installer Raw Accel","Install Raw Accel");install.Click+=async delegate{await Run(false);};panel.Controls.Add(install);
+            acknowledge.CheckedChanged+=delegate{UpdateButtons();};if(optional)panel.Controls.Add(acknowledge);
+            install.Text=optional?T("Last ned og installer","Download and install"):T("Installer driver · følger med","Install driver · included");install.Click+=async delegate{await Run(false);};panel.Controls.Add(install);
             remove.Text=T("Avinstaller Interception-driveren","Uninstall the Interception driver");remove.Click+=async delegate{await Run(true);};if(optional)panel.Controls.Add(remove);
             var refresh=new Button{Width=310,Height=35,Text=T("Kontroller status etter omstart","Check status after restart")};refresh.Click+=delegate{if(!working)RefreshStatus();};panel.Controls.Add(refresh);panel.Controls.Add(status);
+            var done=new Button{Width=310,Height=35,Text=T("Tilbake til profilen","Back to profile")};done.Click+=delegate{if(!working)Close();};panel.Controls.Add(done);
             FormClosing+=delegate(object sender,FormClosingEventArgs e){if(working){e.Cancel=true;status.Text=T("Vent til oppsettet er ferdig. Ingen automatisk omstart.","Wait for setup to finish. There is no automatic restart.");}};
             RefreshStatus();
         }
-        void UpdateButtons(){install.Enabled=!working&&acknowledge.Checked;remove.Enabled=!working&&acknowledge.Checked;}
+        void UpdateButtons(){install.Enabled=!working&&(interception?acknowledge.Checked:!rawReady&&!rawRegistered);remove.Enabled=!working&&acknowledge.Checked;}
         void RefreshStatus(){
             try{
                 if(interception)status.Text=DriverSetup.Registered(true)?T("Driverregistrering funnet. Bruk Finn mus etter omstart for å kontrollere tilgang.","Driver registration found. Use Find mouse after restarting to check access."):T("Ingen driverregistrering funnet.","No driver registration found.");
-                else {string error;string json=Driver.TryRead(out error);status.Text=json!=null?T("Driveren svarer. Lukk oppsettet og aktiver ønsket profil.","Driver responds. Close setup and activate your chosen profile."):DriverSetup.Registered(false)?T("Driveren er registrert, men svarer ikke. Start Windows på nytt; ikke installer på nytt først.","Driver is registered but not responding. Restart Windows before attempting reinstallation."):T("Driveren er ikke tilgjengelig. Ingen profil er aktivert av oppsettet.","Driver is unavailable. Setup has not activated a profile.");}
+                else {string error;string json=Driver.TryRead(out error);rawReady=json!=null;rawRegistered=DriverSetup.Registered(false);status.Text=json!=null?T("Driveren svarer. Lukk oppsettet og aktiver ønsket profil.","Driver responds. Close setup and activate your chosen profile."):rawRegistered?T("Driveren er registrert, men svarer ikke. Start Windows på nytt; ikke installer på nytt først.","Driver is registered but not responding. Restart Windows before attempting reinstallation."):T("Driveren er ikke tilgjengelig. Ingen profil er aktivert av oppsettet.","Driver is unavailable. Setup has not activated a profile.");}
             }catch(Exception e){status.Text=T("Status kunne ikke bekreftes: ","Status could not be verified: ")+e.Message;}
             UpdateButtons();
         }
         async Task Run(bool uninstall){
-            if(working||!acknowledge.Checked)return;
+            if(working||(interception&&!acknowledge.Checked)||(!interception&&(rawReady||rawRegistered)))return;
             if(MessageBox.Show(this,T("Dette starter offisiell driverinstallasjon med administratorgodkjenning. Omstart kan kreves. Fortsette?","This starts the official driver installer with administrator approval. A restart may be required. Continue?"),Text,MessageBoxButtons.YesNo,MessageBoxIcon.Warning,MessageBoxDefaultButton.Button2)!=DialogResult.Yes)return;
             working=true;UpdateButtons();
             try{
@@ -104,7 +106,7 @@ namespace VectorFit {
                 status.Text=T("Oppsettet er avsluttet. Avslutningskode: ","Setup exited. Exit code: ")+code+T(". Les meldingen fra installasjonsprogrammet. Start Windows på nytt og kontroller status. Ingen profil er aktivert.",". Read the installer's message. Restart Windows and check status. No profile was activated.");
             }catch(System.ComponentModel.Win32Exception e){status.Text=e.NativeErrorCode==1223?T("Administratorgodkjenningen ble avbrutt. Ingen installasjon er bekreftet.","Administrator approval was cancelled. Installation is not confirmed."):e.Message;}
             catch(Exception e){status.Text=T("Oppsettet kunne ikke fullføres: ","Setup could not complete: ")+e.Message;}
-            finally{working=false;UpdateButtons();}
+            finally{working=false;if(!interception){string error;rawReady=Driver.TryRead(out error)!=null;rawRegistered=DriverSetup.Registered(false);}UpdateButtons();}
         }
     }
 }

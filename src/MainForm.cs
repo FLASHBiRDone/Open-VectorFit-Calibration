@@ -281,7 +281,7 @@ namespace VectorFit {
             Add(stack,TextLabel("Runde "+session.Round+" · Bruk profilen globalt",22,true,43));
             Add(stack,ProfileSelector());
             var setupRow=new FlowLayoutPanel{Height=52};
-            setupRow.Controls.Add(Button(DriverSetup.Text("Sett opp Raw Accel","Set up Raw Accel"),delegate{OpenDriverSetup(false);},245));
+            setupRow.Controls.Add(Button(DriverSetup.Text("Klargjør global bruk","Set up global use"),delegate{OpenDriverSetup(false);},245));
             setupRow.Controls.Add(Button(DriverSetup.Text("Valgfritt: Interception-oppsett","Optional: Interception setup"),delegate{OpenDriverSetup(true);},310));
             Add(stack,setupRow);
             string measured=session.Baseline.Count==0?"Åpne en måling eller kalibrer først.":session.ValidationPassed?"A/B-testen bekrefter forbedring for denne profiltypen.":session.CanTryRawAccel?"Forbedring er ikke bekreftet. Du kan velge å prøve profilen ved å trykke Aktiver med Raw Accel.":session.Notes;
@@ -289,8 +289,8 @@ namespace VectorFit {
             bool curved=session.UsesInterception;
             Add(stack,TextLabel(curved?"Valgfri, eksperimentell korreksjon av retning og buer. Krever en separat Interception-driver og at VectorFit fortsetter å kjøre. Stopp med Ctrl+Alt+F12.":"Følsomhet, retning og rotasjon brukes av Raw Accel på kjernenivå, også med rå museinput i spill. VectorFit kan lukkes. Interception brukes ikke.",11,false,65));
             var buttons=new FlowLayoutPanel{Height=52};
-            var activate=Button(curved?"Åpne Interception-valg":"Aktiver med Raw Accel",delegate{if(curved)OpenGlobal();else ActivateProfile();},245,true);
-            activate.Enabled=curved||(activeJson!=null&&session.CanTryRawAccel);
+            var activate=Button(curved?"Åpne Interception-valg":activeJson==null?DriverSetup.Text("Klargjør global bruk","Set up global use"):"Aktiver med Raw Accel",delegate{if(curved)OpenGlobal();else if(activeJson==null)OpenDriverSetup(false);else ActivateProfile();},245,true);
+            activate.Enabled=curved||activeJson==null||session.CanTryRawAccel;
             buttons.Controls.Add(activate);
             if(!curved)buttons.Controls.Add(Button("Eksporter Raw Accel-profil",ExportProfile,240));
             buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,220));Add(stack,buttons);
