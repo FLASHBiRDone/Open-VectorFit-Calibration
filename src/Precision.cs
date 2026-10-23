@@ -31,12 +31,13 @@ namespace VectorFit {
             note=okay?"Presisjonskontrollen viser ingen tydelig forverring innenfor grensene. Dette er ikke et eget bevis på forbedring.":"Presisjonsdelen fikk færre treff, flere bomklikk eller over 5 % lengre tid. Behold profilen.";
             return okay;
         }
-        public static bool Improved(List<Trial> ts,out string note,bool controlPriority=false){
+        public static bool Improved(List<Trial> ts,out string note,bool controlPriority=false,bool smallGain=false){
             if(!Acceptable(ts,out note,true))return false;
             var pairs=ts.GroupBy(t=>t.PairId).ToList();
             var a=pairs.Select(g=>g.Single(t=>!t.Corrected)).ToList();var b=pairs.Select(g=>g.Single(t=>t.Corrected)).ToList();
-            var wins=Enumerable.Range(0,a.Count).Where(i=>Time(b[i])<Time(a[i])*.95).ToList();
-            bool pass=b.Count(t=>t.Hit==true)>=a.Count(t=>t.Hit==true)&&b.Sum(t=>Time(t))<=a.Sum(t=>Time(t))*.95&&SequentialComparison.SignTail(wins.Count,a.Count)<=(controlPriority?.025:.05)&&wins.Select(i=>a[i].Direction).Distinct().Count()>=6;
+            double factor=smallGain?.995:.95;
+            var wins=Enumerable.Range(0,a.Count).Where(i=>Time(b[i])<Time(a[i])*factor).ToList();
+            bool pass=b.Count(t=>t.Hit==true)>=a.Count(t=>t.Hit==true)&&b.Sum(t=>Time(t))<=a.Sum(t=>Time(t))*factor&&SequentialComparison.SignTail(wins.Count,a.Count)<=(controlPriority?.025:.05)&&wins.Select(i=>a[i].Direction).Distinct().Count()>=6;
             bool control=false;
             if(controlPriority){
                 var qa=a.Select(Trajectory.Measure).ToList();var qb=b.Select(Trajectory.Measure).ToList();
@@ -46,11 +47,11 @@ namespace VectorFit {
                 }
             }
             if(control&&!pass){note=DriverSetup.Text("Presisjon: tydelig mindre etterkorrigering med bevart treffandel og tid. Gjenta samme forslag.","Precision: clearly less corrective travel with maintained hits and time. Repeat this proposal.");return true;}
-            note=pass?DriverSetup.Text("Presisjon: kortere samlet tid til treff, med minst like mange treff. Gjenta samme forslag.","Precision: lower total time to hit, with at least as many hits. Repeat this proposal."):DriverSetup.Text("Raskere presisjon er ikke tydelig nok bekreftet. Behold profilen og gjenta samme forslag.","Faster precision is not clearly supported. Keep the profile and repeat this proposal.");if(!pass){note+=DriverSetup.Text(" Tid: "," Time: ")+a.Average(t=>Time(t)).ToString("F0")+" → "+b.Average(t=>Time(t)).ToString("F0")+" ms. "+wins.Count+"/16"+DriverSetup.Text(" mål var minst 5 % raskere; kravet er "," targets were at least 5% faster; required: ")+(controlPriority?"13":"12")+"/16.";if(controlPriority)note+=DriverSetup.Text(" Alternativet med mindre etterkorrigering bestod heller ikke alle kontrollene."," The corrective-travel alternative did not pass all safeguards either.");}
+            note=pass?DriverSetup.Text("Presisjon: kortere samlet tid til treff, med minst like mange treff. Gjenta samme forslag.","Precision: lower total time to hit, with at least as many hits. Repeat this proposal."):DriverSetup.Text("Raskere presisjon er ikke tydelig nok bekreftet. Behold profilen og gjenta samme forslag.","Faster precision is not clearly supported. Keep the profile and repeat this proposal.");if(!pass){note+=DriverSetup.Text(" Tid: "," Time: ")+a.Average(t=>Time(t)).ToString("F0")+" → "+b.Average(t=>Time(t)).ToString("F0")+" ms. "+wins.Count+"/16"+(smallGain?DriverSetup.Text(" mål var minst 0,5 % raskere; kravet er "," targets were at least 0.5% faster; required: "):DriverSetup.Text(" mål var minst 5 % raskere; kravet er "," targets were at least 5% faster; required: "))+(controlPriority?"13":"12")+"/16.";if(controlPriority)note+=DriverSetup.Text(" Alternativet med mindre etterkorrigering bestod heller ikke alle kontrollene."," The corrective-travel alternative did not pass all safeguards either.");}
             return pass;
         }
         public static bool Overall(Session s,ComparisonReport flick,out string note){
-            bool precision=s.PrecisionFirst?Improved(s.PrecisionValidation,out note,s.ControlPriority):Acceptable(s.PrecisionValidation,out note);
+            bool precision=s.PrecisionFirst?Improved(s.PrecisionValidation,out note,s.ControlPriority,s.SmallGainProtocol):Acceptable(s.PrecisionValidation,out note);
             return precision&&(s.PrecisionFirst?flick.Finished&&flick.GuardsPassed:flick.Decision==ComparisonDecision.Improved);
         }
         static bool Finite(double x){return !Double.IsNaN(x)&&!Double.IsInfinity(x);}

@@ -145,17 +145,18 @@ namespace VectorFit {
 
 namespace VectorFit {
     public static class FlickScoring {
+        public static int Score100(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>5)return 0;return Math.Max(1,100-(int)Math.Floor(99*radii/5));}
         public static int Score(double radii){if(Double.IsNaN(radii)||Double.IsInfinity(radii)||radii<0||radii>5)return 0;return 12-2*Math.Max(1,(int)Math.Ceiling(radii));}
         public static double? Average(List<Trial> ts){return ts.Count>0&&ts.All(t=>t.FlickScore.HasValue)?(double?)ts.Average(t=>(double)t.FlickScore.Value):null;}
     }
     class ConfigGauges:Control {
-        List<Trial> pa,pb,fa,fb;string context;bool comparable,protocolMismatch;
+        List<Trial> pa,pb,fa,fb;string context;bool comparable,protocolMismatch;int scoreMax;
         static string T(string nb,string en){return DriverSetup.Text(nb,en);}
         public ConfigGauges(Session s,bool initial=false){
-            Height=436;DoubleBuffered=true;BackColor=Color.FromArgb(28,34,38);
+            scoreMax=s.SmallGainProtocol?100:10;Height=436;DoubleBuffered=true;BackColor=Color.FromArgb(28,34,38);
             fa=s.Validation.Where(t=>!t.Corrected).ToList();fb=s.Validation.Where(t=>t.Corrected).ToList();pa=s.PrecisionValidation.Where(t=>!t.Corrected).ToList();pb=s.PrecisionValidation.Where(t=>t.Corrected).ToList();
             comparable=fa.Count==fb.Count&&pa.Count==pb.Count&&fa.Count>=16&&pa.Count==16;
-            context=T("Denne profilen (B) mot måleprofilen (A) · samme A/B-test","This config (B) vs previous config (A) · same A/B test");
+            context=T("Forrige profil → nytt forslag · samme test","Previous profile → new proposal · same test");
             if(fa.Count==0&&fb.Count==0){
                 string note;var history=History.Load(s,Driver.Data,out note);fa=new List<Trial>();pa=new List<Trial>();fb=s.Baseline;pb=s.PrecisionBaseline;
                 if(history.Count>1){var prev=history[history.Count-2].Session;fa=prev.Baseline;pa=prev.PrecisionBaseline;}
@@ -164,7 +165,7 @@ namespace VectorFit {
             if(initial){var first=ResultStory.Initial(s);fa=first==null?new List<Trial>():first.Flick;pa=first==null?new List<Trial>():first.Precision;
                 fb=s.Baseline;pb=s.PrecisionBaseline;
                 context=T("Fast baseline fra første test → denne rundens måleprofil · trend","Fixed first-test baseline → this round's measured config · trend");comparable=false;
-                if(first!=null&&(first.BalancedTargets!=s.BalancedTargets||first.PrecisionFirst!=s.PrecisionFirst)){context+=T(" · ulik testprotokoll"," · different test protocol");protocolMismatch=true;}
+                if(first!=null&&(first.BalancedTargets!=s.BalancedTargets||first.PrecisionFirst!=s.PrecisionFirst||first.SmallGainProtocol!=s.SmallGainProtocol)){context+=T(" · ulik testprotokoll"," · different test protocol");protocolMismatch=true;}
             }
             AccessibleName=context;
         }
@@ -175,7 +176,7 @@ namespace VectorFit {
                 g.DrawString(context+(comparable?"":T(" · foreløpig"," · provisional")),title,ink,new RectangleF(16,12,Width-32,38));
                 string[] names={T("Presisjon · tid per mål","Precision · time per target"),T("Presisjon · etterkorrigering","Precision · corrective travel"),T("Flick · tid til klikk","Flick · time to click"),T("Flick · poeng per mål","Flick · score per target")};
                 double?[] a={Mean(pa,PrecisionCheck.Time),Correction(pa),Mean(fa,t=>t.TotalMs),FlickScoring.Average(fa)},b={Mean(pb,PrecisionCheck.Time),Correction(pb),Mean(fb,t=>t.TotalMs),FlickScoring.Average(fb)};
-                string[] units={"ms","%","ms","/ 10"};int col=Width/2;
+                string[] units={"ms","%","ms","/ "+scoreMax};int col=Width/2;
                 for(int i=0;i<4;i++){int x=16+(i%2)*col,y=55+(i/2)*160;float w=col-32;
                     g.DrawString(names[i],title,ink,x,y);g.DrawString(i==3?T("Høyere er bedre","Higher is better"):T("Lavere er bedre*","Lower is better*"),body,muted,x,y+22);
                     bool known=!protocolMismatch&&a[i].HasValue&&b[i].HasValue;double delta=known?b[i].Value-a[i].Value:0;bool better=i==3?delta>0:delta<0;

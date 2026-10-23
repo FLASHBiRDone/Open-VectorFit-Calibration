@@ -15,7 +15,7 @@ namespace VectorFit {
     }
     public class InitialReference {
         public string CreatedUtc;
-        public bool BalancedTargets,PrecisionFirst;
+        public bool BalancedTargets,PrecisionFirst,SmallGainProtocol;
         public Setup Setup; public Correction Input;
         public CircleData Circles;
         public List<Trial> Flick,Precision;
@@ -26,8 +26,11 @@ namespace VectorFit {
             if(s.InitialBaseline!=null)return s.InitialBaseline;
             string note;var history=History.Load(s,Driver.Data,out note);var first=history[0].Session;
             if(first.Round!=1||first.Baseline.Count==0)return null;
-            return new InitialReference{Circles=JObject.FromObject(first.Circles).ToObject<CircleData>(),CreatedUtc=first.CreatedUtc,BalancedTargets=first.BalancedTargets,PrecisionFirst=first.PrecisionFirst,Setup=JObject.FromObject(first.Setup).ToObject<Setup>(),Input=first.InputCorrection.Copy(),Flick=JArray.FromObject(first.Baseline).ToObject<List<Trial>>(),Precision=JArray.FromObject(first.PrecisionBaseline).ToObject<List<Trial>>()};
+            return new InitialReference{SmallGainProtocol=first.SmallGainProtocol,Circles=JObject.FromObject(first.Circles).ToObject<CircleData>(),CreatedUtc=first.CreatedUtc,BalancedTargets=first.BalancedTargets,PrecisionFirst=first.PrecisionFirst,Setup=JObject.FromObject(first.Setup).ToObject<Setup>(),Input=first.InputCorrection.Copy(),Flick=JArray.FromObject(first.Baseline).ToObject<List<Trial>>(),Precision=JArray.FromObject(first.PrecisionBaseline).ToObject<List<Trial>>()};
         }
+        public static bool Confirmed(Session s){var r=Record(s);var previous=s.PriorComparisons.Where(p=>p.Key==r.Key&&p.Complete).LastOrDefault();return s.FrozenProposal&&r.Complete&&r.Passed&&previous!=null&&previous.Passed;}
+        public static string SimpleVerdict(Session s){var r=Record(s);if(!r.Complete)return T("Ikke ferdig testet","Test not complete");if(Confirmed(s))return T("Ny profil er bedre · anbefalt bytte","New profile is better · switching recommended");if(r.Passed)return T("Ny profil er lovende · bekreft én gang til","New profile is promising · confirm once more");if(r.PrecisionHitsB<r.PrecisionHitsA&&r.MeanPrecisionB>=r.MeanPrecisionA||r.MeanPrecisionB>r.MeanPrecisionA*1.02&&r.HitsB<=r.HitsA)return T("Forrige profil fungerte bedre i denne testen","Previous profile performed better in this test");return T("Ingen klar vinner · behold profilen foreløpig","No clear winner · keep your profile for now");}
+        public static string SimpleSummary(Session s){var r=Record(s);if(!r.Complete)return T("Fullfør testen. Grønt og rødt viser foreløpige forskjeller.","Finish the test. Green and red show provisional differences.");var pa=s.PrecisionValidation.Where(t=>!t.Corrected).Select(Trajectory.Measure).ToList();var pb=s.PrecisionValidation.Where(t=>t.Corrected).Select(Trajectory.Measure).ToList();string control=pa.All(q=>q.Available)&&pb.All(q=>q.Available)?(pb.Average(q=>q.CorrectionDistance)<pa.Average(q=>q.CorrectionDistance)?T("mindre etterkorrigering","less corrective travel"):T("mer eller lik etterkorrigering","more or equal corrective travel")):T("ukjent etterkorrigering","unknown corrective travel");return T("Presisjon: ","Precision: ")+r.MeanPrecisionA.ToString("F0")+" → "+r.MeanPrecisionB.ToString("F0")+" ms; "+control+".\n"+T("Flick: ","Flick: ")+r.HitsA+" → "+r.HitsB+T(" bullseye-treff. Se poeng og tid nedenfor."," bullseye hits. See score and time below.")+"\n"+(Confirmed(s)?T("Fordelen holdt i bekreftelsesrunden. Aktivering er ditt valg.","The benefit held in confirmation. Activation is your choice."):T("Test samme forslag igjen før du justerer videre. Forrige profil er ikke nødvendigvis bedre selv om forslaget ikke er godkjent.","Repeat the same proposal before adjusting further. A proposal that is not approved does not automatically make the previous profile better."));}
         public static string Explanation(Session s){
             var r=Record(s);if(!r.Complete)return T("Samle en full A/B-test før profilen vurderes. Målerne viser bare foreløpige forskjeller.","Complete the A/B test before judging the proposal. Gauges show provisional differences only.");
             var pa=s.PrecisionValidation.Where(t=>!t.Corrected).ToList();var pb=s.PrecisionValidation.Where(t=>t.Corrected).ToList();
@@ -44,6 +47,7 @@ namespace VectorFit {
 
         public static string Key(Session s){
             var obj=new JObject(new JProperty("Setup",JObject.FromObject(s.Setup)),new JProperty("Mode",s.Mode.ToString()),new JProperty("Input",JObject.FromObject(s.InputCorrection)),new JProperty("Candidate",JObject.FromObject(s.Correction)),new JProperty("Curve",JObject.FromObject(s.ActiveCurve)));
+            if(s.SmallGainProtocol)obj["Revision"]="small-gain-confirmation-large-targets-100-v1";
             if(s.ControlPriority)obj["Objective"]="precision-speed-or-control-v1";
             if(s.BalancedTargets)obj["TargetPlan"]="balanced-distance-v1";
             if(s.PrecisionFirst)obj["Protocol"]="precision-first-rings-v1";

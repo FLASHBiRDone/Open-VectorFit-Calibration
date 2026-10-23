@@ -18,7 +18,7 @@ namespace VectorFit {
             using(var body=new Font("Segoe UI",13,GraphicsUnit.Pixel))using(var title=new Font("Segoe UI",16,FontStyle.Bold,GraphicsUnit.Pixel))using(var ink=new SolidBrush(Color.FromArgb(237,244,242)))using(var muted=new SolidBrush(Color.FromArgb(169,184,188)))
             using(var blue=new Pen(Color.FromArgb(123,173,242),1.5f))using(var orange=new Pen(Color.FromArgb(235,179,112),1.5f))using(var white=new Pen(Color.FromArgb(237,244,242),2.5f))using(var green=new Pen(Color.FromArgb(109,218,182),2.5f))using(var grid=new Pen(Color.FromArgb(94,112,121),1)){
                 PaintText.Draw(g,natural?"Registrert · "+recorded+" / "+goal+" runder":"Medianform · "+median.Report.Valid+" / "+goal+" målbare sirkler",title,ink,18,13);
-                PaintText.Draw(g,"Formdata · Med klokken: "+cw.Report.Valid+"  ·  Mot klokken: "+ccw.Report.Valid,body,muted,18,40);
+                PaintText.Draw(g,DriverSetup.Text("Med bevegelsesdata · med klokken: ","With movement data · clockwise: ")+cw.Report.Valid+DriverSetup.Text(" · mot klokken: "," · counterclockwise: ")+ccw.Report.Valid,body,muted,18,40);
                 float left=Width*.25f,right=Width*.75f,cy=166,scale=65;
                 double extent=median.Points.Concat(predicted.Points).Concat(cw.Points).Concat(ccw.Points).Select(p=>Math.Max(Math.Abs(p.X),Math.Abs(p.Y))).DefaultIfEmpty(1).Max();scale=(float)(83/Math.Max(1.15,extent));
                 grid.DashStyle=DashStyle.Dash;foreach(float x in new[]{left,right}){g.DrawEllipse(grid,x-scale,cy-scale,scale*2,scale*2);g.DrawLine(grid,x-95,cy,x+95,cy);g.DrawLine(grid,x,cy-90,x,cy+90);}
@@ -28,7 +28,7 @@ namespace VectorFit {
                 PaintText.Draw(g,"Lengste/korteste akse: "+(median.Ellipse.Valid?median.Report.Roundness.ToString("F3"):"—"),body,ink,left-95,265);
                 PaintText.Draw(g,"Lengste/korteste akse: "+(predicted.Ellipse.Valid?predicted.Report.Roundness.ToString("F3"):"—"),body,ink,right-95,265);
                 PaintText.Draw(g,"1,000 = rund · Grå stiplet linje = sirkel · Hvit = median · Blå = med · Oransje = mot",body,muted,new RectangleF(18,294,Width-36,40));
-                PaintText.Draw(g,"Sentrert og størrelsesnormalisert. Beregnet form er en simulering; A/B må vise om siktingen blir bedre.",body,muted,new RectangleF(18,330,Width-36,38));
+                PaintText.Draw(g,DriverSetup.Text("Alle forsøk teller. Ujevn form tas med; bare manglende bevegelsesdata utelates. Beregnet form er simulert.","Every attempt counts. Irregular shapes are included; only missing movement data is omitted. Predicted shape is simulated."),body,muted,new RectangleF(18,330,Width-36,38));
             }
         }
     }

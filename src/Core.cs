@@ -63,6 +63,7 @@ namespace VectorFit {
         public CircleData VerifiedCircles;
         public Correction VerifiedCircleProfile;
         public InitialReference InitialBaseline;
+        public bool SmallGainProtocol;
         public bool ControlPriority;
         public bool BalancedTargets;
         public bool PrecisionFirst; // Explicit protocol flag; historical sessions retain their assessment.
@@ -113,7 +114,7 @@ namespace VectorFit {
         }
         public Session NextRound(string parentMeasurement,bool useCandidate=true) {
             if(!CanTryRawAccel)throw new Exception("Beregn en standardprofil før du starter neste runde.");
-            return new Session{InitialBaseline=ResultStory.Initial(this),ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
+            return new Session{SmallGainProtocol=true,InitialBaseline=ResultStory.Initial(this),ControlPriority=true,BalancedTargets=true,PrecisionFirst=true,GuidedCalibration=true,DualTask=true,Round=Round+1,ParentMeasurement=parentMeasurement,CalibrateSensitivity=CalibrateSensitivity,InputCorrection=(useCandidate?Correction:InputCorrection).Copy(),
                 Setup=new Setup{Mouse=Setup.Mouse,Dpi=Setup.Dpi,Cm360=Setup.Cm360,Hfov=Setup.Hfov,Device=Setup.Device}};
         }
         public Session Confirmation(string source){
@@ -296,7 +297,7 @@ namespace VectorFit {
             return length<1e-8?0:area/(length*trial.Radius);
         }
         public static string Validate(Session s) {
-            if(s.AdaptiveValidation){var report=SequentialComparison.Evaluate(s);s.ValidationPassed=report.Decision==ComparisonDecision.Improved;if(report.Finished)s.ComparisonGoal=report.Clicks;string precisionNote="";if(s.DualTask){s.ValidationPassed=PrecisionCheck.Overall(s,report,out precisionNote);}return report.Note+(s.DualTask?" "+precisionNote:"");}
+            if(s.AdaptiveValidation){var report=SequentialComparison.Evaluate(s);s.ValidationPassed=report.Decision==ComparisonDecision.Improved;if(report.Finished)s.ComparisonGoal=report.Clicks;string precisionNote="";if(s.DualTask){s.ValidationPassed=PrecisionCheck.Overall(s,report,out precisionNote);if(s.SmallGainProtocol)s.ValidationPassed=s.ValidationPassed&&ResultStory.Confirmed(s);}return report.Note+(s.DualTask?" "+precisionNote:"");}
             var a=s.Validation.Where(t=>t.Valid&&!t.Corrected).ToList();var b=s.Validation.Where(t=>t.Valid&&t.Corrected).ToList();
             s.ValidationPassed=false;
             if(Enumerable.Range(0,8).Any(d=>a.Count(t=>t.Direction==d)<4||b.Count(t=>t.Direction==d)<4))return "A/B-testen er ikke fullført.";

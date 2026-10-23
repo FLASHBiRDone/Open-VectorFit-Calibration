@@ -65,7 +65,7 @@ namespace VectorFit {
                 }
                 float pointerX=(float)(cx+x*scale),pointerY=(float)(cy+y*scale);using(var pen=new Pen(Color.FromArgb(237,244,242),1.5f)){g.DrawLine(pen,pointerX-9,pointerY,pointerX+9,pointerY);g.DrawLine(pen,pointerX,pointerY-9,pointerX,pointerY+9);}
                 if(phase=="ready")PaintText.Draw(g,DriverSetup.Text("Plasser musen midt på underlaget, med plass i alle retninger.","Center your mouse on the pad, with room in every direction."),body,ink,32,Height-145);
-                string instruction=phase=="ready"?"Klikk én gang for å starte. Tegn deretter uten å klikke.":phase=="paused"?"Pause. Trykk mellomrom for å fortsette.":phase=="countdown"?"Gjør deg klar. Finn en behagelig bevegelse.":"La formen falle naturlig. Det er ingen punkter du må treffe.";
+                string instruction=phase=="ready"?DriverSetup.Text("Ingen krav til fine eller lukkede sirkler. Alle forsøk teller. Klikk for å starte.","No need for neat or closed circles. Every attempt counts. Click to start."):phase=="paused"?"Pause. Trykk mellomrom for å fortsette.":phase=="countdown"?"Gjør deg klar. Finn en behagelig bevegelse.":"La formen falle naturlig. Det er ingen punkter du må treffe.";
                 PaintText.Draw(g,instruction,body,ink,32,Height-112);
                 if(feedback!="")PaintText.Draw(g,feedback,small,muted,32,Height-137);
                 PaintText.Draw(g,"Datainnhenting → analyse → neste fase",small,muted,32,Height-76);

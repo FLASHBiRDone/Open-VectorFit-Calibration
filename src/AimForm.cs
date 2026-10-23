@@ -10,7 +10,7 @@ namespace VectorFit {
     class AimForm:Form {
         CurveEngine curve;readonly Setup setup;Correction correction;readonly Correction inputCorrection;Correction hardwareCorrection;bool confirmation;bool validation;
         Session automaticSession,comparisonSession;int round=1,warmupFinished,calibrationGoal=80,circlesFinished,circleGoal=15,nextPair;bool adaptive,autoBegin,sequential,baselineOnly;
-        bool rings,balanced;
+        bool rings,balanced,largeTargets;
         bool dualTask,precision,precisionMappingDone,precisionComparisonDone,introPending;
         int flickFinished,flickComparisonGoal=32;
         List<AimClick> clicks=new List<AimClick>();
@@ -29,12 +29,12 @@ namespace VectorFit {
         public int ComparisonGoal {get{return validation?(precision||precisionComparisonDone?flickComparisonGoal:goal):sequential?32:64;}}
         public bool Sequential {get{return sequential;}}
         public AimForm(Session session,bool ab,bool integrated=false,bool startAutomatically=false):this(session.Setup,session.Correction,ab,session.ActiveCurve,session.InputCorrection) {
-            balanced=session.BalancedTargets;rings=session.PrecisionFirst;hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
+            largeTargets=session.SmallGainProtocol;balanced=session.BalancedTargets;rings=session.PrecisionFirst;hardwareCorrection=session.TestInputCorrection??session.InputCorrection;confirmation=session.FrozenProposal;dualTask=session.DualTask;round=session.Round;Text=L.T("VectorFit | Runde "+round+(ab?" · A/B: "+session.ModeName:" · Kalibrering og A/B"));
             adaptive=session.AdaptiveCalibration;autoBegin=startAutomatically&&!dualTask;calibrationGoal=adaptive?48:80;circleGoal=session.Circles.Goal;circlesFinished=ab?0:Math.Min(circleGoal,session.Circles.Laps.Count(session.Circles.Counts));
             sequential=session.AdaptiveValidation;baselineOnly=session.GuidedCalibration&&session.Round==1&&!ab;
             comparisonSession=new Session{FitReady=session.FitReady,Repeatable=session.Repeatable,Mode=session.Mode,AdaptiveValidation=sequential};
             PrepareTargets(ab);
-            if(integrated&&!ab)automaticSession=new Session{ControlPriority=session.ControlPriority,BalancedTargets=session.BalancedTargets,PrecisionFirst=session.PrecisionFirst,DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
+            if(integrated&&!ab)automaticSession=new Session{SmallGainProtocol=session.SmallGainProtocol,ControlPriority=session.ControlPriority,BalancedTargets=session.BalancedTargets,PrecisionFirst=session.PrecisionFirst,DualTask=dualTask,Setup=session.Setup,Mode=session.Mode,Round=session.Round,CalibrateSensitivity=session.CalibrateSensitivity,RequireCloserClicks=session.RequireCloserClicks,AdaptiveCalibration=adaptive,AdaptiveValidation=sequential,TrajectoryFitting=session.TrajectoryFitting,ConservativeSensitivity=session.ConservativeSensitivity,Circles=session.Circles,InputCorrection=session.InputCorrection.Copy()};
         }
         public AimForm(Setup s,Correction c,bool ab,CurveProfile cp=null,Correction input=null) {
             setup=s;correction=c;inputCorrection=input??new Correction();hardwareCorrection=inputCorrection;validation=ab;curve=new CurveEngine(cp??new CurveProfile());Text=ab?"VectorFit | A/B-test":"VectorFit | Kalibrering";
@@ -199,7 +199,7 @@ namespace VectorFit {
                 if(tr.Hit==true){hitPulse=clock.Elapsed.TotalMilliseconds;hitPosition=point;}
             }
 
-            if(rings&&!precision)tr.FlickScore=clicked?FlickScoring.Score(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180)):0;
+            if(rings&&!precision)tr.FlickScore=clicked?(largeTargets?FlickScoring.Score100(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180)):FlickScoring.Score(AimGeometry.Offset(tr.TargetX,tr.TargetY,cameraX,cameraY).Length/Math.Tan(tr.HitRadiusDegrees*Math.PI/180))):0;
             if(precision){
                 if(!clicked)tr.TotalMs=PrecisionCheck.TimeLimit;
                 (validation?PrecisionValidationResults:PrecisionResults).Add(tr);finished++;
@@ -214,7 +214,7 @@ namespace VectorFit {
             }
             bool practiceEnded=dualTask&&current.Warmup&&warmupFinished==8;current=null;if(!advance)return;if(practiceEnded){ShowIntro();return;}BeginNext();
         }
-        float TargetRadius {get {return (float)Math.Max(5,ClientSize.Width/(2*Math.Tan(setup.Hfov*Math.PI/360))*Math.Tan((precision?.35:.65)*Math.PI/180));}}
+        float TargetRadius {get {return (float)Math.Max(5,ClientSize.Width/(2*Math.Tan(setup.Hfov*Math.PI/360))*Math.Tan((precision?.35:largeTargets?.8:.65)*Math.PI/180));}}
         bool HitsTarget(PointF p) {double dx=p.X-ClientSize.Width/2,dy=p.Y-ClientSize.Height/2;return dx*dx+dy*dy<=TargetRadius*TargetRadius;}
         public CalibrationProgress Progress {get {
             bool integrated=automaticSession!=null;
@@ -284,7 +284,7 @@ namespace VectorFit {
                     var sz=g.MeasureString(sub,small);using(var brush=new SolidBrush(Color.FromArgb(164,179,185)))PaintText.Draw(g,sub,small,brush,cx-sz.Width/2,cy+98);
                 }
             }
-            if(rings&&!precision)PaintText.Draw(g,DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0")+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+" / 10":""),small,Brushes.White,32,Height-55);
+            if(rings&&!precision)PaintText.Draw(g,(largeTargets?DriverSetup.Text("Sentrum 100 · poengområde 1–100 · bom 0","Center 100 · scoring area 1–100 · miss 0"):DriverSetup.Text("Bullseye 10 · ringer 8 / 6 / 4 / 2 · bom 0", "Bullseye 10 · rings 8 / 6 / 4 / 2 · miss 0"))+(Results.Count>0&&Results.Last().FlickScore.HasValue?"  |  "+DriverSetup.Text("Siste: ","Last: ")+Results.Last().FlickScore+(largeTargets?" / 100":" / 10"):""),small,Brushes.White,32,Height-55);
             if(current!=null&&current.Warmup)PaintText.Draw(g,"Øvelsesrunde: lagres ikke",body,Brushes.White,32,80);
             if(dualTask){if(phase=="ready")DrawInstructions(g);else using(var b=new SolidBrush(Color.FromArgb(109,218,182)))PaintText.Draw(g,PartTitle,body,b,32,130);}
             DrawEffects(g);
