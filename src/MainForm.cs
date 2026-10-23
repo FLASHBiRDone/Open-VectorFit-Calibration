@@ -62,7 +62,8 @@ namespace VectorFit {
 #endif
         void SetupPage() {
             var stack=Stack();content.Controls.Add(stack);
-            Add(stack,TextLabel("Start med standard eller eget oppsett",22,true,43));
+            Add(stack,new JourneyStrip(0));
+            Add(stack,TextLabel(DriverSetup.Text("Klargjør din første måling","Prepare your first measurement"),22,true,43));
             Add(stack,TextLabel(L.English?"You can start with the defaults. Game setup, circles and sensitivity adjustment are optional. Match your mouse DPI when known.":"Du kan starte med standardverdiene. Spilloppsett, sirkler og sensitivitetsjustering er valgfrie. Bruk musens faktiske DPI hvis du kjenner den.",11,false,42));
             var fields=new TableLayoutPanel{Height=82,ColumnCount=4,RowCount=2};
             for(int i=0;i<4;i++)fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,i==0?34:22));
@@ -73,7 +74,7 @@ namespace VectorFit {
             fields.Controls.Add(mouse,0,1);fields.Controls.Add(dpi,1,1);fields.Controls.Add(cm,2,1);fields.Controls.Add(fov,3,1);Add(stack,fields);
             var buttons=new FlowLayoutPanel{Height=52};buttons.Controls.Add(Button("Start kalibrering",delegate{Start(false);},230,true));buttons.Controls.Add(Button("Åpne lagret måling",LoadSession,230));buttons.Controls.Add(Button(L.English?"Game setup / blind measurement":"Spilloppsett / blindmåling",OpenGameSetup,320));Add(stack,buttons);
             var choices=new Panel{Height=64};var circle=CircleChoice();var sensitivity=SensitivityChoice();circle.Dock=DockStyle.Top;sensitivity.Dock=DockStyle.Bottom;choices.Controls.Add(circle);choices.Controls.Add(sensitivity);Add(stack,choices);
-            Add(stack,new CalibrationSteps());
+            Add(stack,TextLabel(DriverSetup.Text("1. Sentrer musen og bruk et komfortabelt grep.\n2. Flick: klikk én gang, også når du bommer. Presisjon: fortsett til treff.\n3. Se forslaget før du tester eller aktiverer det.","1. Center your mouse and use a comfortable grip.\n2. Flick: click once, even on a miss. Precision: keep going until a hit.\n3. Review the proposal before testing or activating it."),11,false,82));
             Add(stack,TextLabel("Fase 1 samler baseline og foreslår innstillinger. Velg forslaget for å starte fase 2 med korrigeringen aktiv. Hver fase har flick og presisjon, med instruksjoner og klikk for å starte hver del. Senere faser kontrollerer neste forslag.",10,false,43));
             AddDetails(stack,"Hjelp med museoppsettet",TextLabel("Slik finner du cm/360°: Mål hvor langt du flytter musen på musematten for én hel omdreining i spillet. Standardverdien 40 er et utgangspunkt, ikke en avlesning fra G703.",10,false,50),TextLabel("DPI må være lik innstillingen på musen. Synsfeltet bestemmer hvordan målene vises; bruk spillets horisontale synsfelt.",10,false,42));
 
@@ -274,63 +275,31 @@ namespace VectorFit {
         }
         void ResultPage() {
             var stack=Stack();content.Controls.Add(stack);
-            Add(stack,TextLabel(session.FitReady?"Fase "+session.Round+" · "+(session.Round==1?"Baseline analysert":"Måling analysert"):"Datainnhenting · ingen ferdig profil ennå",22,true,43));
-            Add(stack,TextLabel(session.Baseline.Count==0?"Kalibrer musen først. Her ser du målingene og kan teste korreksjonen før den brukes utenfor programmet.":session.Validation.Count>0?"Resultatet gjelder dette profilparet. Ingen innstillinger endres når du leser analysen.":session.Notes,11,false,50));
-            if(session.Baseline.Count==0){if(CanResumeCircles)Add(stack,Button("Fortsett til måltest",delegate{Start(false,false,false,true);},240,true));else Add(stack,Button("Gå til kalibrering",delegate{ShowPage(0);},230,true));return;}
-            Add(stack,TextLabel(ResultStory.SimpleVerdict(session),20,true,60));
-            Add(stack,TextLabel(ResultStory.SimpleSummary(session),11,false,110));
-            Add(stack,new OutcomeTimeline(session));
-            Add(stack,new ConfigGauges(session));
-            AddDetails(stack,DriverSetup.Text("Retningskart","Direction map"),new DirectionMap(session));
+            bool compared=session.Validation.Count>0,complete=ResultStory.Record(session).Complete;
+            int step=!session.FitReady?1:!compared?2:!complete?3:4;
+            Add(stack,new JourneyStrip(step));
+            string heading=!session.FitReady?DriverSetup.Text("Fullfør baseline","Complete your baseline"):!compared?DriverSetup.Text("Ditt forslag er klart","Your proposal is ready"):!complete?DriverSetup.Text("Sammenligningen er ikke ferdig","Comparison is not complete"):ResultStory.SimpleVerdict(session);
+            Add(stack,TextLabel(heading,22,true,58));
+            Add(stack,TextLabel(!session.FitReady?DriverSetup.Text("Samle bevegelsene dine først. Ingen forbedring er vurdert ennå.","Record your movements first. No improvement has been assessed yet."):!compared?DriverSetup.Text("Dette er beregnede innstillinger, ikke en målt forbedring. Test baseline mot forslaget før du velger profil.","These are proposed settings, not a measured improvement. Compare baseline with the proposal before choosing a profile."):DriverSetup.Text("Baseline er profil A i denne testen. Ny profil er forslag B. Første baseline beholdes separat.","Baseline is profile A in this test. New profile is proposal B. Your first baseline remains separate."),11,false,55));
+            var actions=new FlowLayoutPanel{Height=54};
+            if(!session.FitReady){actions.Controls.Add(Button(CanResumeCircles?DriverSetup.Text("Fortsett til måltest","Continue to target test"):DriverSetup.Text("Gå til oppsett","Go to setup"),delegate{if(CanResumeCircles)Start(false,false,false,true);else ShowPage(0);},300,true));}
+            else if(!compared||!complete){actions.Controls.Add(Button(DriverSetup.Text("Test baseline mot ny profil","Test baseline against new profile"),delegate{Start(true);},350,true));}
+            else if(!session.ValidationPassed){actions.Controls.Add(Button(DriverSetup.Text("Gjenta samme sammenligning","Repeat this comparison"),ConfirmProposal,350,true));}
+            else actions.Controls.Add(Button(DriverSetup.Text("Velg profil for Windows og spill","Choose profile for Windows and games"),delegate{ShowPage(2);},380,true));
+            actions.Controls.Add(Button(DriverSetup.Text("Historikk og tilbakeføring","History and restore"),delegate{ShowPage(4);},280));Add(stack,actions);
+            if(!session.FitReady)return;
+            if(!compared){Add(stack,new ProposalView(session));Add(stack,TextLabel(DriverSetup.Text("Etter-resultatet vises først når du har målt med begge profilene. Testen bruker korreksjonen lokalt; global aktivering er et eget valg.","After-results appear only after measuring both profiles. The test applies the correction locally; global activation is a separate choice."),11,false,60));}
+            else {Add(stack,new OutcomeTimeline(session));AddDetails(stack,DriverSetup.Text("Etterkorrigering, flick og gjennomsnitt","Corrective travel, flick and averages"),new ConfigGauges(session),TextLabel(ResultStory.SimpleSummary(session),11,false,110));AddDetails(stack,DriverSetup.Text("Hvorfor denne anbefalingen?","Why this recommendation?"),Narrative(session));}
+            AddDetails(stack,DriverSetup.Text("Se mønsteret i åtte retninger","Explore all eight directions"),new DirectionMap(session));
+            AddDetails(stack,DriverSetup.Text("Innstillinger: baseline → forslag","Settings: baseline → proposal"),new ProposalView(session),ProfileSelector());
             AddDetails(stack,DriverSetup.Text("Utvikling fra første baseline","Progress from first baseline"),new ConfigGauges(session,true));
-            if(session.Validation.Count>0||session.FrozenProposal){
-                var confirm=Button(session.Validation.Count>0?"Bekreft samme forslag på nytt":"Start bekreftelsesrunden",ConfirmProposal,350,true);confirm.Enabled=session.FitReady;Add(stack,confirm);
-                AddDetails(stack,"Hvorfor denne vurderingen?",Narrative(session));
-                AddDetails(stack,"Kontroller av samme forslag",TextLabel(ResultStory.RepeatSummary(session),10,false,Math.Max(100,55+session.PriorComparisons.Count*30)));
-            }
+            if(compared)AddDetails(stack,DriverSetup.Text("Tidligere kontroller av samme forslag","Previous checks of this proposal"),TextLabel(ResultStory.RepeatSummary(session),10,false,Math.Max(100,55+session.PriorComparisons.Count*30)));
             AddCircleComparison(stack);
-            if(session.FitReady){if(session.Validation.Count>0||session.FrozenProposal)AddDetails(stack,"Innstillingene som sammenlignes",new ProposalView(session));else Add(stack,new ProposalView(session));
-                if(session.CanTryRawAccel){var next=new FlowLayoutPanel{Height=52};
-                    next.Controls.Add(Button("Prøv forslaget · start fase "+(session.Round+1),delegate{if(ActivateProfile(false))Start(false,true);},320,session.ReadyForRawAccel||session.Validation.Count==0));
-                    next.Controls.Add(Button("Behold profilen · start fase "+(session.Round+1),ContinueRound,320,!session.ReadyForRawAccel&&session.Validation.Count>0));Add(stack,next);
-                }
-                Add(stack,TextLabel(session.ValidationPassed?"A/B støtter forslaget. Innstillingene brukes først når du velger å aktivere dem.":"Prøveforslag, ikke bekreftet bedre. Knappen lar deg prøve innstillingene globalt og måle neste runde.",10,false,38));
-                Add(stack,TextLabel(session.SensitivityNote,10,false,42));
-                string historyNote;var history=History.Load(session,Driver.Data,out historyNote);
-                if(history.Count>1){var first=history[0];var previous=history[history.Count-2];var current=history[history.Count-1];
-                    Add(stack,TextLabel("Utvikling i datainnhenting · avvik og bevegelsestid\n"+PhaseDelta("Fra baseline",first,current)+"\n"+PhaseDelta("Fra forrige fase",previous,current)+"\nUlik tidsbruk kan påvirke presisjonen. Dette alene bekrefter ikke profileffekt.",10,false,90));
-                }
-            }
-            if(session.ReanalyzedFrom!="")Add(stack,TextLabel("Ny analyse av samme data · ikke en ny måling. Kilde: "+session.ReanalyzedFrom,10,false,36));
-            if(session.Circles.Protocol==2&&session.Circles.Laps.Count(session.Circles.Counts)==60){
-                Add(stack,Button("Beregn forslag fra ellipsetendensen",delegate{SaveSession();session=session.ReanalyzeCircleTrend(SessionName()+".vectorfit.json");SaveSession();ShowPage(1);},380));
-                Add(stack,TextLabel("Lager en ny analyse av de lagrede sirklene. Originalen beholdes. Tidligere A/B godkjenner ikke det nye forslaget. Ingen profil aktiveres.",10,false,44));
-            }
-            if(session.Validation.Count>0) {
-                var stats=new RoundStatistics(session);var a=RoundStatistics.Value(stats.A,0);var b=RoundStatistics.Value(stats.B,0);
-                string av=a.HasValue?a.Value.ToString("F1")+" %":"—",bv=b.HasValue?b.Value.ToString("F1")+" %":"—";
-                Add(stack,TextLabel("Avstand fra klikk til sentrum: "+av+" → "+bv+"   ·   "+RoundStatistics.Delta(a,b,"pp")+"\nA = profilen du målte med. B = forslaget. Tallene er medianer, i prosent av målavstanden.",12,true,59));
-                if(session.AdaptiveValidation)Add(stack,TextLabel("Treff ved klikk: "+stats.A.Count(t=>t.Hit==true)+" / "+stats.A.Count+" → "+stats.B.Count(t=>t.Hit==true)+" / "+stats.B.Count+"  ·  "+"Treff etter overskyting: "+stats.A.Count(t=>Trajectory.Measure(t).HitAfterOvershoot)+" → "+stats.B.Count(t=>Trajectory.Measure(t).HitAfterOvershoot),10,false,24));
-            }
-            if(session.DualTask){
-                Add(stack,TextLabel("Presisjon · treff uten unødvendig tidsbruk",16,true,32));
-                Add(stack,TextLabel("Måleprofil: "+PrecisionCheck.Summary(session.PrecisionBaseline),10,false,32));
-                if(session.PrecisionValidation.Count>0){Add(stack,TextLabel("A: "+PrecisionCheck.Summary(session.PrecisionValidation.Where(t=>!t.Corrected))+"\nB: "+PrecisionCheck.Summary(session.PrecisionValidation.Where(t=>t.Corrected)),10,false,52));}
-                Add(stack,TextLabel("Tidsavbrudd teller som 3000 ms og mislykket mål. Alle bomklikk beholdes. Presisjon brukes som kontroll; flickbevegelsene beregner profilforslaget.",10,false,44));
-            }
-            Add(stack,TextLabel(session.AdaptiveValidation?"A/B vurderer klikkavstand, faktiske treff, overskyting, etterkorrigering og tid. Mindre korrigering kan gi forbedring ved bevart presisjon og minst like mange treff.":session.RequireCloserClicks?"Målet er mindre avstand til sentrum ved klikk. Både treff og bom teller. A/B krever minst 5 % mindre medianavstand for bekreftet forbedring.":"Eldre måling: den opprinnelige A/B-vurderingen er beholdt. Neste runde bruker den nye vurderingen av presisjon og kontroll.",10,false,42));
-            var buttons=new FlowLayoutPanel{Height=52};var test=Button(session.Validation.Count>0?"Bekreft samme forslag på nytt":"Start A/B · flick + presisjon",delegate{ConfirmProposal();},320,session.Validation.Count==0);test.Enabled=session.FitReady;if(session.Validation.Count==0&&!session.FrozenProposal)buttons.Controls.Add(test);
-            buttons.Controls.Add(Button("Grafer og historikk",delegate{ShowPage(3);},220));
-            buttons.Controls.Add(Button("Bruk i Windows og spill",delegate{ShowPage(2);},230));Add(stack,buttons);
-            AddDetails(stack,"Valg for neste runde",SensitivityChoice(),CircleChoice());
-            var row=new TableLayoutPanel{Height=270,ColumnCount=2};row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,49));row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,51));
-            row.Controls.Add(new Radar(session){Dock=DockStyle.Fill},0,0);
-            var c=session.Correction;
-            string text=session.Setup.Mouse+"  ·  "+session.Setup.Dpi+" DPI\n\n";
-            text+="Målinger med bevegelse: "+session.Baseline.Count(t=>t.Valid)+"\n";
-            if(session.FitReady){text+="\nSamlet følsomhet  "+c.Sensitivity.ToString("F3")+"× · "+(session.Setup.Cm360/c.Sensitivity).ToString("F1")+" cm/360°*\nHøyre  "+c.Right.ToString("F3")+"×       Venstre  "+c.Left.ToString("F3")+"×\nNed      "+c.Down.ToString("F3")+"×       Opp        "+c.Up.ToString("F3")+"×\nRotasjon  "+c.Rotation.ToString("F2")+"°\n\nRetning maks ±8 %, rotasjon ±3°.\nFølsomhet: maks 5 % per runde, totalt 0,75–1,25×.\n*Før retningsjustering. DPI på musen endres ikke.";}
-            row.Controls.Add(new Label{Dock=DockStyle.Fill,Text=text,ForeColor=ink,Padding=new Padding(20,8,0,0)},1,0);
-            AddDetails(stack,"Profildetaljer og valgfri kurvekorreksjon",ProfileSelector(),TextLabel(session.UsesInterception?"A/B tester følsomhet, retningsprofil og kurvekorreksjon. Global bruk krever Interception og at VectorFit kjører.":"A/B tester følsomhet, retning og rotasjon slik Raw Accel bruker dem. Kurver og bomskudd måles fortsatt. Ingen Interception kreves.",10,false,45),row,TextLabel(session.CircleNote,10,false,42),TextLabel(session.Round>1?"Denne runden er målt med forrige profil aktiv. A/B sammenligner den med det nye forslaget. Forrige måling er lagret som "+session.ParentMeasurement:"Hver profiltype har sin egen A/B-test. A/B-korreksjonen skjer bare inne i testvinduet. Etter aktivering kan du starte neste runde fra Global profil.",10,false,48));
+            var next=new FlowLayoutPanel{Height=105};
+            if(session.CanTryRawAccel){next.Controls.Add(Button(DriverSetup.Text("Prøv forslaget i neste runde","Try proposal in next round"),delegate{if(ActivateProfile(false))Start(false,true);},320));next.Controls.Add(Button(DriverSetup.Text("Fortsett med aktiv profil","Continue with active profile"),ContinueRound,320));}
+            if(session.Circles.Protocol==2&&session.Circles.Laps.Count(session.Circles.Counts)==60)next.Controls.Add(Button(DriverSetup.Text("Beregn fra eldre sirkelmåling","Reanalyze legacy circles"),delegate{SaveSession();session=session.ReanalyzeCircleTrend(SessionName()+".vectorfit.json");SaveSession();ShowPage(1);},310));
+            next.Controls.Add(Button(DriverSetup.Text("Alle statistikker","All statistics"),delegate{ShowPage(3);},230));
+            AddDetails(stack,DriverSetup.Text("Andre valg og neste kalibreringsrunde","Other options and next calibration round"),TextLabel(DriverSetup.Text("Et forslag er ikke nødvendigvis bedre. Global aktivering krever et eget valg, og må kontrolleres på nytt etter endringer.","A proposal is not necessarily better. Global activation requires a separate choice, and changed settings need fresh validation."),11,false,50),next,SensitivityChoice(),CircleChoice());
         }
         static string PhaseDelta(string label,RoundStatistics before,RoundStatistics after){
             return label+": "+RoundStatistics.Delta(RoundStatistics.Value(before.Baseline,0),RoundStatistics.Value(after.Baseline,0),"pp")+" · "+RoundStatistics.Delta(before.Baseline.Count==0?(double?)null:Analysis.Median(before.Baseline.Select(t=>t.FlickMs)),after.Baseline.Count==0?(double?)null:Analysis.Median(after.Baseline.Select(t=>t.FlickMs)),"ms");

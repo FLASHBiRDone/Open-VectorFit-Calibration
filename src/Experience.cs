@@ -49,7 +49,7 @@ namespace VectorFit {
   static string Value(double? v){return v.HasValue?v.Value.ToString("F1"):"—";}
  }
  public static class AppUpdates {
-  public const string Version="0.18.0";
+  public const string Version="0.18.1";
   static bool checking;
   public static bool Enabled {get{return File.Exists(Path.Combine(Driver.Data,"check-updates.txt"));}set{var p=Path.Combine(Driver.Data,"check-updates.txt");if(value)File.WriteAllText(p,"yes");else if(File.Exists(p))File.Delete(p);}}
   public static bool Newer(string tag){System.Version v;return System.Version.TryParse((tag??"").TrimStart('v'),out v)&&v>new System.Version(Version);}

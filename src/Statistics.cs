@@ -7,6 +7,14 @@ using System.Linq;
 using System.Windows.Forms;
 
 namespace VectorFit {
+    class JourneyStrip:Control {
+        int stage;public JourneyStrip(int active){stage=active;Height=76;DoubleBuffered=true;AccessibleName=DriverSetup.Text("Oppsett, baseline, forslag, sammenlign, bekreft","Setup, baseline, proposal, compare, confirm");}
+        protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);string[] names=L.English?new[]{"Setup","Baseline","Proposal","Compare","Confirm"}:new[]{"Oppsett","Baseline","Forslag","Sammenlign","Bekreft"};
+            using(var font=new Font("Segoe UI",14,FontStyle.Regular,GraphicsUnit.Pixel))using(var bold=new Font("Segoe UI",14,FontStyle.Bold,GraphicsUnit.Pixel)){
+                float w=Width/5f;for(int i=0;i<5;i++){Color c=i==stage?Color.FromArgb(109,218,182):i<stage?Color.FromArgb(169,184,188):Color.FromArgb(100,119,125);using(var brush=new SolidBrush(c)){e.Graphics.DrawString((i+1).ToString("00")+"  "+names[i],i==stage?bold:font,brush,i*w+4,12);e.Graphics.FillRectangle(brush,i*w+4,43,w-18,3);if(i==stage)e.Graphics.DrawString(DriverSetup.Text("Du er her","You are here"),font,brush,i*w+4,51);}}
+            }
+        }
+    }
     class CalibrationSteps:Control {
         public CalibrationSteps(){DoubleBuffered=true;Height=135;BackColor=Color.FromArgb(28,34,38);AccessibleName="Sirkeltest → kartlegging → A/B → resultat";}
         protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);var g=e.Graphics;

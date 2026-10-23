@@ -210,15 +210,14 @@ namespace VectorFit {
                     typeof(MainForm).GetMethod("ShowPage",flags).Invoke(main,new object[]{1});
                     Func<System.Windows.Forms.Control,IEnumerable<System.Windows.Forms.Control>> descendants=null;
                     descendants=control=>control.Controls.Cast<System.Windows.Forms.Control>().SelectMany(child=>new[]{child}.Concat(descendants(child)));
-                    var button=descendants(main).OfType<System.Windows.Forms.Button>().Single(b=>b.Text.StartsWith("Start A/B"));
+                    var button=descendants(main).OfType<System.Windows.Forms.Button>().Single(b=>b.Text.StartsWith("Test baseline"));
                     Check(button.Enabled,"Computed but unstable profile can run local A/B preview");
                     preview.Validation=Synthetic(4,true,false).Concat(Synthetic(4,false,true)).ToList();
                     Analysis.Validate(preview);
                     Check(!preview.ValidationPassed&&preview.CanTryRawAccel,"Unstable calibration can be tried without claiming a validated improvement");
                     preview.FitReady=false;
                     typeof(MainForm).GetMethod("ShowPage",flags).Invoke(main,new object[]{1});
-                    button=descendants(main).OfType<System.Windows.Forms.Button>().Single(b=>b.Text.StartsWith("Start A/B")||b.Text.StartsWith("Bekreft samme"));
-                    Check(!button.Enabled,"Missing computed profile still blocks A/B preview");
+                    Check(!descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Enabled&&(b.Text.StartsWith("Test baseline")||b.Text.StartsWith("Gjenta samme"))),"Missing computed profile still blocks A/B preview");
                     typeof(MainForm).GetMethod("ShowPage",flags).Invoke(main,new object[]{2});
                     var selector=descendants(main).OfType<System.Windows.Forms.ComboBox>().Single(b=>(string)b.Tag!="language");
                     Check(selector.SelectedIndex==0&&descendants(main).OfType<System.Windows.Forms.Button>().Any(b=>b.Text=="Aktiver med Raw Accel"||b.Text=="Klargjør global bruk"),"Global page defaults to the direct Raw Accel route");
